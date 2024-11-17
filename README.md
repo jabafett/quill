@@ -1,4 +1,8 @@
-# quill
+<p align="center">
+    <img width="200" alt="Quill Logo" src="docs/logo/quill_full_logo_50.png">
+</p>
+
+<p align="center">quill</p>
 
 <p align="center">
   <strong>AI-Powered Git Commit Message Generator</strong>
@@ -59,10 +63,12 @@ Supported AI providers:
 ## Configuration
 
 Configuration is stored in either:
+
 - `~/.config/quill.toml`
 - `~/.config/.quill.toml`
 
 Key features:
+
 - Configurable rate limiting (1 request/second)
 - Configurable retries
 - Provider-specific settings
@@ -83,6 +89,7 @@ quill uses your system's secure keyring to store API keys:
 ### Command Details
 
 #### Generate Command
+
 ```bash
 quill generate [flags]
 
@@ -93,6 +100,7 @@ Flags:
 ```
 
 #### Config Management
+
 ```bash
 # View current configuration
 quill config list
@@ -122,6 +130,7 @@ candidate_count = 2
 ```
 
 Available settings:
+
 - `model`: Model identifier
 - `max_tokens`: Maximum response length
 - `temperature`: Creativity of responses (0.0-1.0)
@@ -147,6 +156,7 @@ export OPENAI_API_KEY="your-key"
 ### Interactive UI Controls
 
 When selecting commit messages:
+
 - `↑/↓` or `j/k`: Navigate options
 - `enter`: Select message and create commit
 - `e`: Edit message before commit
@@ -155,6 +165,7 @@ When selecting commit messages:
 ### Git Integration
 
 quill automatically creates commits after message selection:
+
 ```bash
 # Stage changes
 git add .
