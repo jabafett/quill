@@ -16,3 +16,5 @@
 # Cache
 .cache/
 
+# Go sum
+go.sum
