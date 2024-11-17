@@ -1,0 +1,41 @@
+# EXAMPLE CONFIG
+[core]
+# default command to run
+default_command = "generate"
+# default provider to use
+default_provider = "gemini"
+# cache ttl
+cache_ttl = "24h"
+# retry attempts
+retry_attempts = 3
+# how many variations to generate (0 for auto-select; max 3)
+default_candidates = 2
+# max diff size
+max_diff_size = "1MB"
+
+[providers]
+  [providers.anthropic]
+    model = "claude-3-sonnet-20240229"
+    max_tokens = 4096
+    temperature = 0.3
+    retry_attempts = 3
+    candidate_count = 2
+
+  [providers.openai]
+    model = "gpt-4"
+    max_tokens = 4096
+    temperature = 0.3
+    retry_attempts = 3
+    candidate_count = 2
+
+  [providers.gemini]
+    model = "gemini-1.5-flash"
+    max_tokens = 4096
+    temperature = 0.3
+    candidate_count = 2
+
+  [providers.ollama]
+    model = "qwen2.5-8b-instruct"
+    max_tokens = 4096
+    temperature = 0.3
+    candidate_count = 2
