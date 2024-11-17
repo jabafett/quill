@@ -2,17 +2,25 @@ package prompts
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/jabafett/quill/internal/git"
 )
 
-const (
-	// base template for generating commit messages
-	CommitMessageTemplate = `Analyze the following git diff and generate a conventional commit message.
-The message should follow this format:
-<type>(<scope>): <description>
+// CommitMessagePrompt template for generating commit messages
+const CommitMessagePrompt = `Generate a concise commit message for the following git changes:
 
-[optional body]
+{{.Diff}}
 
-[optional footer(s)]
+The commit message should:
+1. Follow the Conventional Commits format (type(scope): description)
+2. Be specific about what files were changed and how
+3. Focus only on the actual changes shown in the diff
+4. For deletions, use 'chore' type unless the deletion has a specific purpose
+5. Keep the description under 72 characters
+6. Include only factual information from the diff
+7. No periods or other punctuation at the end of any lines
+8. Do not capitalize the first letter of the commit message
 
 Types:
 - feat: New features that add functionality (e.g., "feat(auth): add password reset flow")
@@ -22,85 +30,41 @@ Types:
 - refactor: Code changes that neither fix bugs nor add features (restructuring, renaming)
 - perf: Performance improvements (e.g., "perf(queries): optimize database indexing")
 - test: Adding/modifying tests (unit tests, integration tests, e2e tests)
-- chore: Maintenance tasks, dependencies, build changes (no production code change)
+- chore: Maintenance tasks, dependencies, build changes (no production code change
 
-Rules:
-- Use imperative mood ("add" not "added", "change" not "changed")
-- Don't capitalize first letter of description
-- No period at the end of the description
-- Keep first line under 72 characters
-- Separate subject from body with a blank line
-- Use body to explain what and why vs. how
-- If breaking change, add BREAKING CHANGE: in footer
-- Reference issues and PRs in footer when applicable
+Files changed: {{.Files}}
+Lines added: {{.Added}}
+Lines deleted: {{.Deleted}}
 
-Example:
-feat(auth): add password reset flow
+Generate only the commit message without any explanation or additional text.`
 
-Git diff:
-%s`
+// GetCommitPrompt formats the commit message template with git diff information
+func GetCommitPrompt(repo *git.Repository) (string, error) {
+	// Get diff and stats
+	diff, err := repo.GetStagedDiff()
+	if err != nil {
+		return "", fmt.Errorf("failed to get staged diff: %w", err)
+	}
 
-	// used by the suggest command to group related files
-	SuggestGroupsTemplate = `Analyze these changed files and suggest logical groupings for separate commits.
+	if diff == "" {
+		return "", fmt.Errorf("no changes to commit")
+	}
 
-Rules for grouping:
-- Group files by related functionality or purpose
-- Consider directory structure and file types
-- Separate unrelated changes into different groups
-- Identify breaking changes or major refactors
-- Keep test files with their implementation files
-- Group documentation changes separately
-- Consider dependency changes as separate groups
-- Always group .gitignore changes separately
+	added, deleted, files, err := repo.GetStagedDiffStats()
+	if err != nil {
+		return "", fmt.Errorf("failed to get diff stats: %w", err)
+	}
 
-For each group, provide:
-1. A descriptive name for the group
-2. List of files in the group
-3. Suggested commit type (feat, fix, etc.)
-4. The conventional commit message for the group
+	// For simple file deletions, return a standard message template
+	if len(files) == 1 && added == 0 && deleted > 0 {
+		return fmt.Sprintf("chore: remove %s", files[0]), nil
+	}
 
-Output format:
-Group 1: [name]
-Type: [commit type]
-Files:
-- [file1]
-- [file2]
-Commit message: [commit message]
+	// Format the prompt with context
+	prompt := strings.ReplaceAll(CommitMessagePrompt, "{{.Diff}}", diff)
+	prompt = strings.ReplaceAll(prompt, "{{.Files}}", strings.Join(files, ", "))
+	prompt = strings.ReplaceAll(prompt, "{{.Added}}", fmt.Sprintf("%d", added))
+	prompt = strings.ReplaceAll(prompt, "{{.Deleted}}", fmt.Sprintf("%d", deleted))
 
-Group 2: [name]
-...
-
-Rules for commit messages:
-Types:
-- feat: New features that add functionality (e.g., "feat(auth): add password reset flow")
-- fix: Bug fixes or error corrections (e.g., "fix(api): handle null response from server")
-- docs: Documentation changes (README, API docs, comments, etc.)
-- style: Code style/formatting changes (whitespace, formatting, missing semi-colons)
-- refactor: Code changes that neither fix bugs nor add features (restructuring, renaming)
-- perf: Performance improvements (e.g., "perf(queries): optimize database indexing")
-- test: Adding/modifying tests (unit tests, integration tests, e2e tests)
-- chore: Maintenance tasks, dependencies, build changes (no production code change)
-
-Rules:
-- Use imperative mood ("add" not "added", "change" not "changed")
-- Don't capitalize first letter of description
-- No period at the end of the description
-- Keep first line under 72 characters
-- Separate subject from body with a blank line
-- Use body to explain what and why vs. how
-- If breaking change, add BREAKING CHANGE: in footer
-- Reference issues and PRs in footer when applicable
-
-Example:
-feat(auth): add password reset flow
-
-Changed files:
-%s
-Git diff:
-%s`
-)
-
-// GetCommitPrompt formats the commit message template with the provided diff
-func GetCommitPrompt(diff string) string {
-	return fmt.Sprintf(CommitMessageTemplate, diff)
+	return prompt, nil
 }

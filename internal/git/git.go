@@ -2,6 +2,8 @@ package git
 
 import (
 	"fmt"
+	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -22,42 +24,43 @@ func NewRepository() (*Repository, error) {
 
 // GetStagedDiff returns the git diff for staged changes
 func (r *Repository) GetStagedDiff() (string, error) {
-	w, err := r.repo.Worktree()
+	cmd := exec.Command("git", "diff", "--staged", "--no-color")
+	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
+		return "", fmt.Errorf("failed to get staged diff: %w", err)
+	}
+	return string(output), nil
+}
+
+// GetStagedDiffStats returns more detailed diff stats
+func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []string, err error) {
+	cmd := exec.Command("git", "diff", "--staged", "--numstat")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, 0, nil, fmt.Errorf("failed to get diff stats: %w", err)
 	}
 
-	status, err := w.Status()
-	if err != nil {
-		return "", fmt.Errorf("failed to get status: %w", err)
-	}
-
-	var diff strings.Builder
-	for path, fileStatus := range status {
-		if fileStatus.Staging != git.Unmodified {
-			// Get the file's content
-			file, err := w.Filesystem.Open(path)
-			if err != nil {
-				continue // Skip files we can't open
+	// Parse the numstat output
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	files = make([]string, 0, len(lines))
+	
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) >= 3 {
+			if a, err := strconv.Atoi(parts[0]); err == nil {
+				added += a
 			}
-			defer file.Close()
-
-			// Write the diff header
-			diff.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", path, path))
-			
-			// Add status indicators
-			switch fileStatus.Staging {
-			case git.Added:
-				diff.WriteString(fmt.Sprintf("+++ b/%s\n", path))
-			case git.Modified:
-				diff.WriteString(fmt.Sprintf("--- a/%s\n+++ b/%s\n", path, path))
-			case git.Deleted:
-				diff.WriteString(fmt.Sprintf("--- a/%s\n", path))
+			if d, err := strconv.Atoi(parts[1]); err == nil {
+				deleted += d
 			}
+			files = append(files, parts[2])
 		}
 	}
-
-	return diff.String(), nil
+	
+	return added, deleted, files, nil
 }
 
 // IsGitRepo checks if the current directory is a git repository

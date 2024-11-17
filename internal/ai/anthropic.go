@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 )
 
 type AnthropicProvider struct {
@@ -14,10 +15,10 @@ type AnthropicProvider struct {
 }
 
 type anthropicRequest struct {
-	Model       string               `json:"model"`
-	MaxTokens   int                  `json:"max_tokens"`
-	Messages    []anthropicMessage   `json:"messages"`
-	Temperature float32              `json:"temperature"`
+	Model       string             `json:"model"`
+	MaxTokens   int                `json:"max_tokens"`
+	Messages    []anthropicMessage `json:"messages"`
+	Temperature float32            `json:"temperature"`
 }
 
 type anthropicMessage struct {
