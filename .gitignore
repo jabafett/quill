@@ -1,0 +1,21 @@
+# Binary
+/quill
+/bin
+
+# IDE
+.idea/
+.vscode/
+
+# Dependencies
+/vendor/
+
+# Config
+.quill.toml
+.env
+
+# Cache
+.cache/
+
+# Go files
+go.mod
+go.sum
