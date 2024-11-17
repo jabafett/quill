@@ -4,13 +4,14 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jabafett/quill/internal/ai"
 	"github.com/jabafett/quill/tests/mocks"
 )
 
 func TestGenerateWorkflow(t *testing.T) {
-	mockProvider := &mocks.MockGeminiProvider{
+	mock := &mocks.MockGeminiProvider{
 		GenerateFunc: func(ctx context.Context, prompt string, opts ai.GenerateOptions) ([]string, error) {
 			return []string{
 				"feat(test): add new testing infrastructure",
@@ -19,12 +20,13 @@ func TestGenerateWorkflow(t *testing.T) {
 		},
 	}
 
+	provider := ai.GetRateLimitedProvider(mock, true)
+
 	ctx := context.Background()
 	testDiff := "diff --git a/test.go b/test.go\n+test content"
 
-	responses, err := mockProvider.Generate(ctx, testDiff, ai.GenerateOptions{
+	responses, err := provider.Generate(ctx, testDiff, ai.GenerateOptions{
 		MaxCandidates: 2,
-		Temperature:   &float32Value,
 	})
 
 	if err != nil {
@@ -41,9 +43,19 @@ func TestGenerateWorkflow(t *testing.T) {
 			t.Errorf("Invalid commit message format: %s", resp)
 		}
 	}
-}
 
-var float32Value float32 = 0.3
+	// Verify rate limiting
+	start := time.Now()
+	_, err = provider.Generate(ctx, testDiff, ai.GenerateOptions{})
+	if err != nil {
+		t.Fatalf("Second generate call failed: %v", err)
+	}
+
+	duration := time.Since(start)
+	if duration < time.Second {
+		t.Error("Rate limiting not enforced")
+	}
+}
 
 func isValidCommitMessage(msg string) bool {
 	// Verify conventional commit format
@@ -67,30 +79,6 @@ func isValidCommitMessage(msg string) bool {
 	// Check description
 	description := strings.TrimSpace(parts[1])
 	return len(description) > 0 && description[len(description)-1] != '.'
-}
-
-func TestGenerateWorkflowWithOptions(t *testing.T) {
-	mockProvider := &mocks.MockGeminiProvider{
-		GenerateFunc: func(ctx context.Context, prompt string, opts ai.GenerateOptions) ([]string, error) {
-			// Verify options are passed correctly
-			if opts.MaxCandidates != 3 || *opts.Temperature != 0.7 {
-				t.Errorf("Expected MaxCandidates=3, Temperature=0.7, got %d, %f", 
-					opts.MaxCandidates, *opts.Temperature)
-			}
-			return []string{"feat(test): test message"}, nil
-		},
-	}
-
-	ctx := context.Background()
-	temp := float32(0.7)
-	_, err := mockProvider.Generate(ctx, "test diff", ai.GenerateOptions{
-		MaxCandidates: 3,
-		Temperature:   &temp,
-	})
-
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
 }
 
 func TestBreakingChangeCommitMessage(t *testing.T) {

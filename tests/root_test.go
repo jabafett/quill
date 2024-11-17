@@ -14,9 +14,22 @@ func mockRootCmd() *cobra.Command {
 	}
 	
 	cmd.PersistentFlags().Bool("debug", false, "Enable debug output")
-	cmd.AddCommand(&cobra.Command{Use: "generate"})
-	cmd.AddCommand(&cobra.Command{Use: "init"})
-	cmd.AddCommand(&cobra.Command{Use: "config"})
+
+	// Silence output only during tests
+	cmd.SilenceUsage = true
+	cmd.SilenceErrors = true
+
+	// Add subcommands
+	for _, subcmd := range []*cobra.Command{
+		&cobra.Command{Use: "generate"},
+		&cobra.Command{Use: "init"},
+		&cobra.Command{Use: "config"},
+	} {
+		// Silence subcommands during tests
+		subcmd.SilenceUsage = true
+		subcmd.SilenceErrors = true
+		cmd.AddCommand(subcmd)
+	}
 	
 	return cmd
 }

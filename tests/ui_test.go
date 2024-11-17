@@ -18,6 +18,11 @@ func TestCommitMessageModel(t *testing.T) {
 
 	model := ui.NewCommitMessageModel(messages)
 
+	// Initialize the model with a window size
+	model.Init()
+	newModel, _ := model.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	model = newModel.(ui.CommitMessageModel)
+
 	// Test initial state
 	view := model.View()
 	for _, msg := range messages {

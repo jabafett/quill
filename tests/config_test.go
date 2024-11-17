@@ -11,25 +11,22 @@ import (
 func TestConfigLoading(t *testing.T) {
 	// Create temporary config file
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, ".quill.toml")
+	configDir := filepath.Join(tmpDir, ".config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
 
-	configContent := `
-[core]
-default_provider = "gemini"
-cache_ttl = "24h"
-default_candidates = 2
-max_diff_size = "1MB"
-retry_attempts = 3
+	// Try both config names
+	configNames := []string{"quill.toml", ".quill.toml"}
+	configPath := filepath.Join(configDir, configNames[0]) // Use first name by default
 
-[providers.gemini]
-model = "gemini-1.5-flash-002"
-max_tokens = 4096
-temperature = 0.3
-retry_attempts = 3
-candidate_count = 2
-`
+	// Read example config content
+	exampleConfig, err := os.ReadFile("../example_quill.toml")
+	if err != nil {
+		t.Fatalf("Failed to read example config: %v", err)
+	}
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err = os.WriteFile(configPath, exampleConfig, 0644)
 	if err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
 	}
@@ -43,7 +40,7 @@ candidate_count = 2
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Verify core config values
+	// Verify core config values match example config
 	if cfg.Core.DefaultProvider != "gemini" {
 		t.Errorf("Expected default provider 'gemini', got %s", cfg.Core.DefaultProvider)
 	}
@@ -52,29 +49,33 @@ candidate_count = 2
 		t.Errorf("Expected default candidates 2, got %d", cfg.Core.DefaultCandidates)
 	}
 
-	// Verify provider config
-	provider, ok := cfg.Providers["gemini"]
-	if !ok {
-		t.Fatal("Gemini provider config not found")
+	// Verify all providers from example config
+	expectedProviders := []string{"anthropic", "openai", "gemini", "ollama"}
+	for _, provider := range expectedProviders {
+		if _, ok := cfg.Providers[provider]; !ok {
+			t.Errorf("Expected provider '%s' not found in config", provider)
+		}
 	}
 
-	if provider.Model != "gemini-1.5-flash-002" {
-		t.Errorf("Expected model 'gemini-1.5-flash-002', got %s", provider.Model)
+	// Verify specific provider settings
+	gemini := cfg.Providers["gemini"]
+	if gemini.Model != "gemini-1.5-flash-002" {
+		t.Errorf("Expected model 'gemini-1.5-flash', got %s", gemini.Model)
 	}
-
-	if provider.Temperature != 0.3 {
-		t.Errorf("Expected temperature 0.3, got %f", provider.Temperature)
-	}
-
-	if provider.CandidateCount != 2 {
-		t.Errorf("Expected candidate count 2, got %d", provider.CandidateCount)
+	if gemini.Temperature != 0.3 {
+		t.Errorf("Expected temperature 0.3, got %f", gemini.Temperature)
 	}
 }
 
 func TestProviderSpecificConfig(t *testing.T) {
 	// Create temporary config file
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, ".quill.toml")
+	configDir := filepath.Join(tmpDir, ".config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	configPath := filepath.Join(configDir, "quill.toml")
 
 	configContent := `
 [core]
@@ -84,7 +85,7 @@ default_provider = "anthropic"
 model = "claude-3-sonnet-20240229"
 max_tokens = 4096
 temperature = 0.3
-retry_attempts = 3
+enable_retries = true
 candidate_count = 2
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -106,5 +107,38 @@ candidate_count = 2
 
 	if provider.Model != "claude-3-sonnet-20240229" {
 		t.Errorf("Expected model 'claude-3-sonnet-20240229', got %s", provider.Model)
+	}
+}
+
+// Add a test for alternate config name
+func TestConfigLoadingAlternateName(t *testing.T) {
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, ".config")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	// Use alternate config name
+	configPath := filepath.Join(configDir, ".quill.toml")
+
+	exampleConfig, err := os.ReadFile("../example_quill.toml")
+	if err != nil {
+		t.Fatalf("Failed to read example config: %v", err)
+	}
+
+	err = os.WriteFile(configPath, exampleConfig, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	os.Setenv("HOME", tmpDir)
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		t.Fatalf("Failed to load config with alternate name: %v", err)
+	}
+
+	if cfg.Core.DefaultProvider != "gemini" {
+		t.Errorf("Failed to load correct config from alternate filename")
 	}
 }

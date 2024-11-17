@@ -2,6 +2,7 @@ package tests
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -17,9 +18,23 @@ func TestGitOperations(t *testing.T) {
 	}
 
 	// Initialize git repo
-	err = runGitCommand(t, "git", "init")
-	if err != nil {
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to init git repo: %v", err)
+	}
+
+	// Set git config
+	cmd = exec.Command("git", "config", "user.name", "Test User")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+	
+	cmd = exec.Command("git", "config", "user.email", "test@example.com")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
 	}
 
 	// Create and add a test file
@@ -29,8 +44,9 @@ func TestGitOperations(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	err = runGitCommand(t, "git", "add", "test.txt")
-	if err != nil {
+	cmd = exec.Command("git", "add", "test.txt")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to stage file: %v", err)
 	}
 
@@ -57,10 +73,4 @@ func TestGitOperations(t *testing.T) {
 	if len(files) != 1 || files[0] != "test.txt" {
 		t.Errorf("Expected ['test.txt'], got %v", files)
 	}
-}
-
-func runGitCommand(t *testing.T, _ string, _ ...string) error {
-	t.Helper()
-	// Implementation of git command runner
-	return nil // Simplified for example
 }
