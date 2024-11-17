@@ -2,8 +2,8 @@
     <img width="200" alt="Quill Logo" src="docs/logo/quill_full_logo_50.png">
 </p>
 
-<p align="center" style="font-weight: bold; text-decoration: underline; font-size: 30px">
-  quill
+<p align="center" style="font-size: larger">
+  <h1>quill</h1>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 - 🤖 **AI-Powered Generation**: Intelligent commit message suggestions using state-of-the-art language models
 - 🎯 **Conventional Commits**: Automatically formatted according to the conventional commits specification
 - 🎨 **Interactive UI**: Beautiful terminal interface for selecting and editing commit messages
-- ⚡ **Multiple Providers**: Support for Google Gemini, Anthropic Claude, OpenAI GPT-4o, and Ollama
+- ⚡ **Multiple Providers**: Support for OpenAI, Gemini, Anthropic, and Ollama
 - 🔒 **Secure**: API keys stored securely in your system's keyring
 - 🚀 **Performance**: Rate limiting and retry mechanisms built-in
 - ⚙️ **Configurable**: Extensive configuration options for customizing behavior
@@ -53,15 +53,6 @@ quill generate
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
 
-## Providers
-
-Supported AI providers:
-
-- **Google Gemini**: Fast and efficient, great for everyday use
-- **Anthropic Claude**: Excellent understanding of code context
-- **OpenAI**: High-quality results with GPT-4
-- **Ollama**: Local execution, no API costs
-
 ## Configuration
 
 Configuration is stored in either:
@@ -71,10 +62,11 @@ Configuration is stored in either:
 
 Key features:
 
-- Configurable rate limiting (1 request/second)
-- Configurable retries
 - Provider-specific settings
 - Multiple candidate generation
+- Editing generated messages
+- Configurable rate limiting (1 request/second)
+- Configurable retries
 
 ## System Requirements
 
@@ -163,20 +155,6 @@ When selecting commit messages:
 - `enter`: Select message and create commit
 - `e`: Edit message before commit
 - `q`: Quit without committing
-
-### Git Integration
-
-quill automatically creates commits after message selection:
-
-```bash
-# Stage changes
-git add .
-
-# Generate and commit in one step
-quill generate
-
-# The selected message will be used to create the commit
-```
 
 ### Upcoming Features
 
