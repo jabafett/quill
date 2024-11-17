@@ -138,19 +138,19 @@ func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m CommitMessageModel) View() string {
 	if m.quitting {
-		return styleError.Render("Operation cancelled\n")
+		return styleError.Render("Operation cancelled") + "\n"
 	}
 
 	if m.selected != "" {
 		var status string
 		if m.editing {
-			status = styleHeading.Render("Edit Commit Message")
-			status += "\nEdit and use the following commit message:\n"
+			status = styleHeading.Render("✎ Edit Commit Message")
+			status += "\n" + styleListItem.Render("Edit and use the following commit message:") + "\n\n"
 		} else {
-			status = styleHeading.Render("Selected Commit Message")
-			status += "\nSelected commit message:\n"
+			status = styleHeading.Render("✓ Selected Commit Message")
+			status += "\n" + styleListItem.Render("Selected commit message:") + "\n\n"
 		}
-		return status + m.selected + "\n"
+		return status + styleSelectedItem.Render(m.selected) + "\n"
 	}
 
 	help := strings.Join([]string{
@@ -162,7 +162,7 @@ func (m CommitMessageModel) View() string {
 	}, " • ")
 
 	return strings.Join([]string{
-		styleHeading.Render("Select Commit Message"),
+		styleHeading.Render("✨ Select Commit Message"),
 		m.list.View(),
 		styleHelp.Render(help),
 	}, "\n")
