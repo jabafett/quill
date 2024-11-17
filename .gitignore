@@ -16,6 +16,3 @@
 # Cache
 .cache/
 
-# Go files
-go.mod
-go.sum
