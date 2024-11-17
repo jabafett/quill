@@ -3,14 +3,14 @@ package ai
 import (
     "context"
     "fmt"
-    "bytes"
-    "encoding/json"
-    "net/http"
+	"bytes"
+	"encoding/json"
+	"net/http"
 )
 
 type OllamaProvider struct {
-    options Options
-    baseURL string
+	options Options
+	baseURL string
 }
 
 type ollamaRequest struct {
@@ -24,15 +24,15 @@ type ollamaResponse struct {
 }
 
 func NewOllamaProvider(options Options) (*OllamaProvider, error) {
-    return &OllamaProvider{
-        options: options,
+	return &OllamaProvider{
+		options: options,
         baseURL: "http://localhost:11434/api/generate",
     }, nil
 }
 
 func (p *OllamaProvider) Generate(ctx context.Context, prompt string, opts GenerateOptions) ([]string, error) {
-    maxCandidates := opts.MaxCandidates
-    if maxCandidates <= 0 {
+	maxCandidates := opts.MaxCandidates
+	if maxCandidates <= 0 {
         maxCandidates = p.options.CandidateCount
     }
     if maxCandidates > 3 {

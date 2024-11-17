@@ -2,7 +2,6 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -29,6 +28,10 @@ func NewGeminiProvider(options Options) (*GeminiProvider, error) {
 }
 
 func (p *GeminiProvider) Generate(ctx context.Context, prompt string, opts GenerateOptions) ([]string, error) {
+	if prompt == "" {
+		return nil, fmt.Errorf("empty prompt provided")
+	}
+
 	maxCandidates := opts.MaxCandidates
 	if maxCandidates <= 0 {
 		maxCandidates = p.options.CandidateCount
@@ -46,39 +49,28 @@ func (p *GeminiProvider) Generate(ctx context.Context, prompt string, opts Gener
 	model.SetTemperature(temperature)
 	model.SetCandidateCount(int32(maxCandidates))
 
+	// Use the prompt directly since it's already formatted
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate content: %w", err)
 	}
 
-	// Convert response to JSON
-	jsonBytes, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+	if resp == nil || len(resp.Candidates) == 0 {
+		return nil, fmt.Errorf("no response generated")
 	}
 
-	// Parse JSON into our custom response struct
-	var geminiResp struct {
-		Candidates []struct {
-			Content struct {
-				Parts []string `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-	}
-	if err := json.Unmarshal(jsonBytes, &geminiResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-
-	if len(geminiResp.Candidates) == 0 {
-		return nil, fmt.Errorf("no valid response generated")
-	}
-
-	responses := make([]string, 0, len(geminiResp.Candidates))
-	for _, candidate := range geminiResp.Candidates {
+	responses := make([]string, 0, len(resp.Candidates))
+	for _, candidate := range resp.Candidates {
 		if len(candidate.Content.Parts) > 0 {
-			message := strings.TrimSpace(candidate.Content.Parts[0])
-			responses = append(responses, message)
+			if textPart, ok := candidate.Content.Parts[0].(genai.Text); ok {
+				message := strings.TrimSpace(string(textPart))
+				responses = append(responses, message)
+			}
 		}
+	}
+
+	if len(responses) == 0 {
+		return nil, fmt.Errorf("no valid commit messages generated")
 	}
 
 	return responses, nil

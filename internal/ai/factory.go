@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"golang.org/x/time/rate"
+
 	"github.com/jabafett/quill/internal/config"
 	"github.com/jabafett/quill/internal/keyring"
+	"golang.org/x/time/rate"
+
 )
 
 const (
@@ -31,9 +33,9 @@ type Options struct {
 
 // GenerateOptions contains options for a single generation request
 type GenerateOptions struct {
-	MaxCandidates int       // Number of variations to generate (max 3)
-	MaxTokens     int       // Override default max tokens if needed
-	Temperature   *float32  // Override default temperature if needed
+	MaxCandidates int      // Number of variations to generate (max 3)
+	MaxTokens     int      // Override default max tokens if needed
+	Temperature   *float32 // Override default temperature if needed
 }
 
 var (
@@ -120,6 +122,8 @@ func NewProvider(name string, cfg *config.Config) (Provider, error) {
 		baseProvider, err = NewAnthropicProvider(options)
 	case "openai":
 		baseProvider, err = NewOpenAIProvider(options)
+	case "ollama":
+		baseProvider, err = NewOllamaProvider(options)
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", name)
 	}
@@ -151,7 +155,7 @@ func (p *rateLimitedProvider) Generate(ctx context.Context, prompt string, opts 
 		})
 		return result, err
 	}
-	
+
 	return generateWithRateLimit(ctx, p.base, prompt, opts)
 }
 

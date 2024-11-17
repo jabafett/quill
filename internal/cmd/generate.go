@@ -106,15 +106,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no staged changes found")
 	}
 
-	// Get git diff
-	spinner := ui.NewProgressSpinner()
-	spinner.Start("Analyzing staged changes")
-	diff, err := repo.GetStagedDiff()
-	if err != nil {
-		spinner.Error(err)
-		return fmt.Errorf("failed to get git diff: %w", err)
-	}
-
 	// Create AI provider
 	providerName := providerFlag
 	if providerName == "" {
@@ -123,11 +114,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	provider, err := ai.NewProvider(providerName, cfg)
 	if err != nil {
-		spinner.Error(err)
 		return fmt.Errorf("failed to create AI provider: %w", err)
 	}
 
 	debug.Log("Using provider: %s", providerName)
+
+	// Create commit message generator
+	generator := ai.NewCommitMessageGenerator(provider, repo)
 
 	// Get number of candidates
 	candidates := candidatesFlag
@@ -146,10 +139,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		opts.Temperature = &temperatureFlag
 	}
 
+	spinner := ui.NewProgressSpinner()
 	spinner.Start("Generating commit messages")
 
 	// Generate commit messages
-	msgs, err := provider.Generate(context.Background(), diff, opts)
+	msgs, err := generator.GenerateStagedCommitMessage(context.Background(), opts)
 	if err != nil {
 		spinner.Error(err)
 		return fmt.Errorf("failed to generate commit messages: %w", err)
