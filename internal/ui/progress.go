@@ -53,21 +53,21 @@ func (p *ProgressSpinner) Error(err error) {
 func (p *ProgressSpinner) View() string {
 	if p.err != nil {
 		return strings.Join([]string{
-			styleHeading.Render("Error"),
-			styleError.Render("✗ Error: " + p.err.Error()),
+			styleHeading.Render("⚠ Error"),
+			styleError.Render("Error: " + p.err.Error()),
 		}, "\n")
 	}
 	if p.done {
 		return strings.Join([]string{
-			styleHeading.Render("Success"),
-			styleSuccess.Render("✓ " + p.message),
+			styleHeading.Render("✓ Success"),
+			styleSuccess.Render(p.message),
 		}, "\n")
 	}
 	return strings.Join([]string{
-		styleHeading.Render("Progress"),
-		fmt.Sprintf("%s %s", 
-			styleSpinner.Render(p.spinner.View()), 
-			p.message),
+		styleHeading.Render("⧗ Progress"),
+		fmt.Sprintf("%s %s",
+			styleSpinner.Render(p.spinner.View()),
+			styleListItem.Render(p.message)),
 	}, "\n")
 }
 
