@@ -148,23 +148,21 @@ export OPENAI_API_KEY="your-key"
 
 When selecting commit messages:
 - `↑/↓` or `j/k`: Navigate options
-- `enter`: Select message
-- `e`: Edit selected message
-- `q`: Quit without selecting
+- `enter`: Select message and create commit
+- `e`: Edit message before commit
+- `q`: Quit without committing
 
 ### Git Integration
 
-quill works with staged changes:
+quill automatically creates commits after message selection:
 ```bash
-# Stage specific files
-git add file1.go file2.go
-
-# Stage all changes
+# Stage changes
 git add .
 
-# Generate commit message
+# Generate and commit in one step
 quill generate
 
+# The selected message will be used to create the commit
 ```
 
 ### Upcoming Features
