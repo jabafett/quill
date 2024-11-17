@@ -18,24 +18,26 @@ max_diff_size = "1MB"
     model = "claude-3-sonnet-20240229"
     max_tokens = 4096
     temperature = 0.3
-    retry_attempts = 3
+    enable_retries = true
     candidate_count = 2
 
   [providers.openai]
     model = "gpt-4"
     max_tokens = 4096
     temperature = 0.3
-    retry_attempts = 3
+    enable_retries = true
     candidate_count = 2
 
   [providers.gemini]
-    model = "gemini-1.5-flash"
+    model = "gemini-1.5-flash-002"
     max_tokens = 4096
     temperature = 0.3
+    enable_retries = true
     candidate_count = 2
 
   [providers.ollama]
     model = "qwen2.5-8b-instruct"
     max_tokens = 4096
     temperature = 0.3
+    enable_retries = false
     candidate_count = 2
