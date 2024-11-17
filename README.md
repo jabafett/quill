@@ -2,7 +2,9 @@
     <img width="200" alt="Quill Logo" src="docs/logo/quill_full_logo_50.png">
 </p>
 
-<p align="center">quill</p>
+<p align="center" style="font-weight: bold; text-decoration: underline; font-size: 30px">
+  quill
+</p>
 
 <p align="center">
   <strong>AI-Powered Git Commit Message Generator</strong>
