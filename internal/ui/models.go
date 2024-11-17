@@ -1,25 +1,9 @@
 package ui
 
 import (
-	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	styleHeading = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#7B2CBF")).
-		MarginBottom(1)
-
-	styleError = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#E63946")).
-		Bold(true)
-
-	styleSuccess = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#2ECC71")).
-		Bold(true)
 )
 
 type ProcessModel struct {
@@ -33,7 +17,7 @@ type ProcessModel struct {
 func NewProcessModel() ProcessModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	s.Style = styleSpinner
 
 	p := progress.New(progress.WithDefaultGradient())
 
@@ -71,4 +55,4 @@ func (m ProcessModel) View() string {
 		return styleSuccess.Render("✓ " + m.message)
 	}
 	return m.spinner.View() + " " + m.message
-} 
+}

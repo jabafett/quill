@@ -7,18 +7,8 @@ import (
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
-	"github.com/jabafett/quill/internal/prompts"
 	"google.golang.org/api/option"
 )
-
-// GeminiResponse represents the structure of the Gemini API response
-type GeminiResponse struct {
-	Candidates []struct {
-		Content struct {
-			Parts []string `json:"parts"`
-		} `json:"content"`
-	} `json:"candidates"`
-}
 
 type GeminiProvider struct {
 	options Options
@@ -38,35 +28,58 @@ func NewGeminiProvider(options Options) (*GeminiProvider, error) {
 	}, nil
 }
 
-func (p *GeminiProvider) GenerateCommitMessage(ctx context.Context, diff string) (string, error) {
-	model := p.client.GenerativeModel(p.options.Model)
-	model.SetTemperature(p.options.Temperature)
+func (p *GeminiProvider) Generate(ctx context.Context, prompt string, opts GenerateOptions) ([]string, error) {
+	maxCandidates := opts.MaxCandidates
+	if maxCandidates <= 0 {
+		maxCandidates = p.options.CandidateCount
+	}
+	if maxCandidates > 3 {
+		maxCandidates = 3
+	}
 
-	prompt := prompts.GetCommitPrompt(diff)
+	temperature := p.options.Temperature
+	if opts.Temperature != nil {
+		temperature = *opts.Temperature
+	}
+
+	model := p.client.GenerativeModel(p.options.Model)
+	model.SetTemperature(temperature)
+	model.SetCandidateCount(int32(maxCandidates))
+
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return "", fmt.Errorf("failed to generate content: %w", err)
+		return nil, fmt.Errorf("failed to generate content: %w", err)
 	}
 
 	// Convert response to JSON
 	jsonBytes, err := json.Marshal(resp)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal response: %w", err)
+		return nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
 	// Parse JSON into our custom response struct
-	var geminiResp GeminiResponse
+	var geminiResp struct {
+		Candidates []struct {
+			Content struct {
+				Parts []string `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
 	if err := json.Unmarshal(jsonBytes, &geminiResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	// Extract commit message from response
-	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("no valid response generated")
+	if len(geminiResp.Candidates) == 0 {
+		return nil, fmt.Errorf("no valid response generated")
 	}
 
-	message := geminiResp.Candidates[0].Content.Parts[0]
-	message = strings.TrimSpace(message)
+	responses := make([]string, 0, len(geminiResp.Candidates))
+	for _, candidate := range geminiResp.Candidates {
+		if len(candidate.Content.Parts) > 0 {
+			message := strings.TrimSpace(candidate.Content.Parts[0])
+			responses = append(responses, message)
+		}
+	}
 
-	return message, nil
+	return responses, nil
 }

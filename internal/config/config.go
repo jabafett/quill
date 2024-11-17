@@ -26,34 +26,47 @@ type CoreConfig struct {
 	DefaultProvider string        `mapstructure:"default_provider"`
 	CacheTTL       time.Duration `mapstructure:"cache_ttl"`
 	MaxDiffSize    string        `mapstructure:"max_diff_size"`
+	DefaultCandidates int        `mapstructure:"default_candidates"`
 }
 
 type AIProvider struct {
 	Model          string  `mapstructure:"model"`
 	MaxTokens      int     `mapstructure:"max_tokens"`
 	Temperature    float32 `mapstructure:"temperature"`
-	RetryAttempts  int     `mapstructure:"retry_attempts"`
+	EnableRetries  bool    `mapstructure:"enable_retries"`
 	CandidateCount int     `mapstructure:"candidate_count"`
 }
 
 // LoadConfig loads and validates the configuration
 func LoadConfig() (*Config, error) {
-	// Set default locations
-	viper.SetConfigName(".quill")
+	// Get user's home directory
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	// Set config paths and names
 	viper.SetConfigType("toml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath(filepath.Join(os.Getenv("HOME"), ".config"))
+	
+	// Add all possible config paths and names
+	viper.AddConfigPath(".")                           // current directory
+	viper.AddConfigPath(filepath.Join(home, ".config")) // ~/.config/
+	viper.AddConfigPath(home)                          // home directory
 
-	// Set defaults
-	viper.SetDefault("core.default_command", "generate")
-	viper.SetDefault("core.cache_ttl", "24h")
-	viper.SetDefault("core.retry_attempts", 3)
+	// Try both config names
+	configNames := []string{"quill", ".quill"}
+	var configFound bool
 
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			return nil, fmt.Errorf("%w: run 'quill init' to create one", ErrNoConfig)
+	for _, name := range configNames {
+		viper.SetConfigName(name)
+		if err := viper.ReadInConfig(); err == nil {
+			configFound = true
+			break
 		}
-		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+
+	if !configFound {
+		return nil, fmt.Errorf("%w: run 'quill init' to create one", ErrNoConfig)
 	}
 
 	var config Config

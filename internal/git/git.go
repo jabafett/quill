@@ -137,3 +137,19 @@ func (r *Repository) GetFileType(path string) (string, error) {
 		return "unknown", nil
 	}
 }
+
+// Commit creates a new git commit with the given message
+func (r *Repository) Commit(message string) error {
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Create commit
+	_, err = w.Commit(message, &git.CommitOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create commit: %w", err)
+	}
+
+	return nil
+}
