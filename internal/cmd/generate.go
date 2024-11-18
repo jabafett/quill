@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jabafett/quill/internal/ai"
+	"github.com/jabafett/quill/internal/templates"
 	"github.com/jabafett/quill/internal/config"
 	"github.com/jabafett/quill/internal/debug"
 	"github.com/jabafett/quill/internal/git"
@@ -120,7 +121,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	debug.Log("Using provider: %s", providerName)
 
 	// Create commit message generator
-	generator := ai.NewCommitMessageGenerator(provider, repo)
+	generator := templates.NewCommitMessageGenerator(provider, repo)
 
 	// Get number of candidates
 	candidates := candidatesFlag
