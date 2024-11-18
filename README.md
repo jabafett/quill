@@ -1,13 +1,11 @@
-# quill
+# quill ![quill](https://github.com/jabafett/quill/blob/main/docs/logo/quill-full-logo-50.png?raw=true, "quill")
 
-![quill](https://github.com/jabafett/quill/blob/main/docs/logo/quill-full-logo-50.png?raw=true, "quill")
+`quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
 [Features](#features) &middot;
 [Quick Start](#quick-start) &middot;
 [Commands](#commands) &middot;
 [Contributing](#contributing)
-
-`quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
 ## Features
 
