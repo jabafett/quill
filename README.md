@@ -36,7 +36,8 @@ quill generate
 | --------------------- | ------------------------------------------- |
 | (✅) `quill init`     | Create initial configuration                |
 | (✅) `quill generate` | Generate commit message from staged changes |
-| (🚧) `quill suggest`  | Suggest file groupings based on analysis    |
+| (🚧) `quill suggest`  | Suggest file groupings based on indexing    |
+| (🚧) `quill index`    | Index repository context                    |
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
 
