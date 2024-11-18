@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 var isDebug bool
@@ -31,4 +32,16 @@ func Dump(name string, value interface{}) {
 	if isDebug {
 		fmt.Fprintf(os.Stderr, "DEBUG: %s = %+v\n", name, value)
 	}
-} 
+}
+
+// TimeIt measures the execution time of a function if debug mode is enabled
+func TimeIt(name string, fn func()) {
+	if isDebug {
+		start := time.Now()
+		fn()
+		duration := time.Since(start)
+		fmt.Fprintf(os.Stderr, "DEBUG: %s took %s\n", name, duration)
+	} else {
+		fn()
+	}
+}

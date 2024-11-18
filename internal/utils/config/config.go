@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/jabafett/quill/internal/utils/keyring"
+	"github.com/jabafett/quill/internal/utils/ai"
 )
 
 // Config validation errors
@@ -35,6 +37,41 @@ type AIProvider struct {
 	Temperature    float32 `mapstructure:"temperature"`
 	EnableRetries  bool    `mapstructure:"enable_retries"`
 	CandidateCount int     `mapstructure:"candidate_count"`
+}
+
+// ConfigToOptions converts a provider config to Options
+func ConfigToOptions(cfg *Config, providerName string) (ai.Options, error) {
+	provider, exists := cfg.Providers[providerName]
+	if !exists {
+		return ai.Options{}, fmt.Errorf("provider '%s' not found in configuration", providerName)
+	}
+
+	// Get API key from keyring
+	var kp keyring.Provider
+	switch providerName {
+	case "gemini":
+		kp = keyring.Gemini
+	case "anthropic":
+		kp = keyring.Anthropic
+	case "openai":
+		kp = keyring.OpenAI
+	default:
+		return ai.Options{}, fmt.Errorf("unknown provider: %s", providerName)
+	}
+
+	apiKey, err := keyring.GetAPIKey(kp)
+	if err != nil {
+		return ai.Options{}, fmt.Errorf("failed to get API key: %w", err)
+	}
+
+	return ai.Options{
+		Model:          provider.Model,
+		MaxTokens:      provider.MaxTokens,
+		Temperature:    provider.Temperature,
+		APIKey:         apiKey,
+		EnableRetries:  provider.EnableRetries,
+		CandidateCount: provider.CandidateCount,
+	}, nil
 }
 
 // LoadConfig loads and validates the configuration

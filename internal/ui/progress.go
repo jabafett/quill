@@ -53,7 +53,7 @@ func (p *ProgressSpinner) Error(err error) {
 func (p *ProgressSpinner) View() string {
 	if p.err != nil {
 		return strings.Join([]string{
-			styleHeading.Render("⚠ Error"),
+			styleHeading.Render("✗ Error"),
 			styleError.Render("Error: " + p.err.Error()),
 		}, "\n")
 	}

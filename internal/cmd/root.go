@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/jabafett/quill/internal/debug"
+	"github.com/jabafett/quill/internal/utils/debug"
 )
 
 var rootCmd = &cobra.Command{

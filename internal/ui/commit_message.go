@@ -111,14 +111,17 @@ func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		// Quit the application
 		case key.Matches(msg, m.keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
+		// Select the selected commit message
 		case key.Matches(msg, m.keys.Enter):
 			if i, ok := m.list.SelectedItem().(commitMessage); ok {
 				m.selected = i.message
 			}
 			return m, tea.Quit
+		// Edit the selected commit message
 		case key.Matches(msg, m.keys.Edit):
 			m.editing = true
 			if i, ok := m.list.SelectedItem().(commitMessage); ok {

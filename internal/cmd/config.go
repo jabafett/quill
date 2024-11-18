@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jabafett/quill/internal/keyring"
+	"github.com/jabafett/quill/internal/utils/keyring"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

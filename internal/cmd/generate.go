@@ -5,12 +5,10 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jabafett/quill/internal/ai"
-	"github.com/jabafett/quill/internal/templates"
-	"github.com/jabafett/quill/internal/config"
-	"github.com/jabafett/quill/internal/debug"
-	"github.com/jabafett/quill/internal/git"
+	"github.com/jabafett/quill/internal/factories"
 	"github.com/jabafett/quill/internal/ui"
+	"github.com/jabafett/quill/internal/utils/ai"
+	"github.com/jabafett/quill/internal/utils/debug"
 	"github.com/spf13/cobra"
 )
 
@@ -77,27 +75,14 @@ func init() {
 
 func runGenerate(cmd *cobra.Command, args []string) error {
 	debug.Log("Starting generate command")
-
-	// Load configuration
-	cfg, err := config.LoadConfig()
+	// Create main factory
+	main, err := factories.NewFactory()
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-	debug.Dump("config", cfg)
-
-	// Initialize git repository
-	if !git.IsGitRepo() {
-		return fmt.Errorf("not a git repository")
-	}
-	debug.Log("Git repository detected")
-
-	repo, err := git.NewRepository()
-	if err != nil {
-		return fmt.Errorf("failed to open git repository: %w", err)
+		return fmt.Errorf("failed to create main factory: %w", err)
 	}
 
 	// Check for staged changes
-	hasChanges, err := repo.HasStagedChanges()
+	hasChanges, err := main.Repo.HasStagedChanges()
 	if err != nil {
 		return fmt.Errorf("failed to check staged changes: %w", err)
 	}
@@ -107,26 +92,24 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no staged changes found")
 	}
 
-	// Create AI provider
-	providerName := providerFlag
-	if providerName == "" {
-		providerName = cfg.Core.DefaultProvider
-	}
-
-	provider, err := ai.NewProvider(providerName, cfg)
+	// Create AI provider through factory
+	provider, err := main.CreateProvider(providerFlag)
 	if err != nil {
 		return fmt.Errorf("failed to create AI provider: %w", err)
 	}
 
-	debug.Log("Using provider: %s", providerName)
+	debug.Log("Using provider: %s", providerFlag)
 
-	// Create commit message generator
-	generator := templates.NewCommitMessageGenerator(provider, repo)
+	// Get formatted prompt
+	prompt, err := main.GenerateCommitPrompt()
+	if err != nil {
+		return fmt.Errorf("failed to get commit prompt: %w", err)
+	}
 
 	// Get number of candidates
 	candidates := candidatesFlag
 	if candidates <= 0 {
-		candidates = cfg.Core.DefaultCandidates
+		candidates = main.Config.Core.DefaultCandidates
 	}
 	if candidates > 3 {
 		candidates = 3 // enforce maximum
@@ -143,8 +126,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	spinner := ui.NewProgressSpinner()
 	spinner.Start("Generating commit messages")
 
-	// Generate commit messages
-	msgs, err := generator.GenerateStagedCommitMessage(context.Background(), opts)
+	// Generate messages using the AI provider
+	msgs, err := provider.Generate(context.Background(), prompt, opts)
 	if err != nil {
 		spinner.Error(err)
 		return fmt.Errorf("failed to generate commit messages: %w", err)
@@ -154,7 +137,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Create an interactive model for message selection
 	model := ui.NewCommitMessageModel(msgs)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithFPS(120))
 
 	finalModel, err := p.Run()
 	if err != nil {
@@ -168,7 +151,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create git commit
-	err = repo.Commit(selectedModel.Selected())
+	err = main.Repo.Commit(selectedModel.Selected())
 	if err != nil {
 		return fmt.Errorf("failed to create commit: %w", err)
 	}

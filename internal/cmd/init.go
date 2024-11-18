@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jabafett/quill/internal/debug"
-	"github.com/jabafett/quill/internal/keyring"
+	"github.com/jabafett/quill/internal/utils/debug"
+	"github.com/jabafett/quill/internal/utils/keyring"
 	"github.com/spf13/cobra"
 )
 
