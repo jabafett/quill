@@ -20,4 +20,5 @@
 go.sum
 
 # Badger
-cache/
+quill-cache/
+*/quill-cache
