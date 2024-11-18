@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jabafett/quill/internal/git"
+	"github.com/jabafett/quill/internal/utils/git"
 )
 
 func TestGitOperations(t *testing.T) {
