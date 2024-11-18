@@ -1,21 +1,20 @@
-package ai
+package templates
 
 import (
 	"context"
 	"fmt"
-
 	"github.com/jabafett/quill/internal/git"
-	"github.com/jabafett/quill/internal/prompts"
+	"github.com/jabafett/quill/internal/ai"
 )
 
 // CommitMessageGenerator handles generating commit messages using AI providers
 type CommitMessageGenerator struct {
-	provider Provider
+	provider ai.Provider
 	repo     *git.Repository
 }
 
 // NewCommitMessageGenerator creates a new generator instance
-func NewCommitMessageGenerator(provider Provider, repo *git.Repository) *CommitMessageGenerator {
+func NewCommitMessageGenerator(provider ai.Provider, repo *git.Repository) *CommitMessageGenerator {
 	return &CommitMessageGenerator{
 		provider: provider,
 		repo:     repo,
@@ -23,9 +22,9 @@ func NewCommitMessageGenerator(provider Provider, repo *git.Repository) *CommitM
 }
 
 // GenerateStagedCommitMessage creates a commit message for the current staged changes
-func (g *CommitMessageGenerator) GenerateStagedCommitMessage(ctx context.Context, opts GenerateOptions) ([]string, error) {
+func (g *CommitMessageGenerator) GenerateStagedCommitMessage(ctx context.Context, opts ai.GenerateOptions) ([]string, error) {
 	// Get formatted prompt
-	prompt, err := prompts.GetCommitPrompt(g.repo)
+	prompt, err := GetCommitPrompt(g.repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get commit prompt: %w", err)
 	}
