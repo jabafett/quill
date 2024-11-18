@@ -1,22 +1,11 @@
 package ui
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-type commitMessage struct {
-	message string
-}
-
-func (c commitMessage) Title() string       { return c.message }
-func (c commitMessage) Description() string { return "" }
-func (c commitMessage) FilterValue() string { return c.message }
 
 type keyMap struct {
 	Up     key.Binding
@@ -25,17 +14,6 @@ type keyMap struct {
 	Quit   key.Binding
 	Edit   key.Binding
 	Reload key.Binding
-}
-
-func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Enter, k.Edit, k.Quit}
-}
-
-func (k keyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Up, k.Down, k.Enter},
-		{k.Edit, k.Reload, k.Quit},
-	}
 }
 
 var keys = keyMap{
@@ -66,109 +44,143 @@ var keys = keyMap{
 }
 
 type CommitMessageModel struct {
-	list     list.Model
+	messages []string
+	cursor   int
+	input    textinput.Model
 	keys     keyMap
 	selected string
 	quitting bool
 	editing  bool
+	width    int
+	height   int
 }
 
 func NewCommitMessageModel(messages []string) CommitMessageModel {
-	items := make([]list.Item, len(messages))
-	for i, msg := range messages {
-		items[i] = commitMessage{
-			message: msg,
-		}
-	}
-
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = styleSelectedItem
-	delegate.Styles.NormalTitle = styleListItem
-
-	l := list.New(items, delegate, 0, 0)
-	l.Title = fmt.Sprintf("Select from %d commit message variations", len(messages))
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
-	l.Styles.Title = styleListTitle
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			keys.Edit,
-			keys.Reload,
-		}
-	}
+	ti := textinput.New()
+	ti.Placeholder = "Edit commit message..."
+	ti.CharLimit = 200
+	ti.Width = 50
+	ti.PromptStyle = lipgloss.NewStyle().Foreground(primaryColor)
+	ti.TextStyle = lipgloss.NewStyle().Foreground(textColor)
+	ti.PlaceholderStyle = lipgloss.NewStyle().Foreground(dimmedColor)
+	ti.Cursor.Style = lipgloss.NewStyle().Foreground(primaryColor)
 
 	return CommitMessageModel{
-		list: l,
-		keys: keys,
+		messages: messages,
+		input:    ti,
+		keys:     keys,
 	}
 }
 
 func (m CommitMessageModel) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.input.Width = m.width - 4
+		return m, nil
+
 	case tea.KeyMsg:
+		if m.editing {
+			switch msg.String() {
+			case "esc":
+				m.editing = false
+				m.input.Blur()
+				return m, nil
+			case "enter":
+				m.selected = m.input.Value()
+				return m, tea.Quit
+			default:
+				var cmd tea.Cmd
+				m.input, cmd = m.input.Update(msg)
+				return m, cmd
+			}
+		}
+
 		switch {
-		// Quit the application
 		case key.Matches(msg, m.keys.Quit):
 			m.quitting = true
 			return m, tea.Quit
-		// Select the selected commit message
-		case key.Matches(msg, m.keys.Enter):
-			if i, ok := m.list.SelectedItem().(commitMessage); ok {
-				m.selected = i.message
+		case key.Matches(msg, m.keys.Up):
+			if m.cursor > 0 {
+				m.cursor--
 			}
+		case key.Matches(msg, m.keys.Down):
+			if m.cursor < len(m.messages)-1 {
+				m.cursor++
+			}
+		case key.Matches(msg, m.keys.Enter):
+			m.selected = m.messages[m.cursor]
 			return m, tea.Quit
-		// Edit the selected commit message
 		case key.Matches(msg, m.keys.Edit):
 			m.editing = true
-			if i, ok := m.list.SelectedItem().(commitMessage); ok {
-				m.selected = i.message
-			}
-			return m, tea.Quit
+			m.input.SetValue(m.messages[m.cursor])
+			m.input.Focus()
+			return m, textinput.Blink
 		}
-	case tea.WindowSizeMsg:
-		h, v := lipgloss.NewStyle().Margin(2, 2).GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
 
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m CommitMessageModel) View() string {
 	if m.quitting {
-		return styleError.Render("Operation cancelled") + "\n"
+		return styleError.Render("Operation cancelled")
+	}
+
+	mainStyle := lipgloss.NewStyle().Padding(1, 2)
+
+	if m.editing {
+		return mainStyle.Render(
+			lipgloss.JoinVertical(lipgloss.Left,
+				styleHeading.Render("✎ Edit Commit Message"),
+				styleInput.Render(m.input.View()),
+				styleHelp.Render("enter: save • esc: cancel"),
+			),
+		)
 	}
 
 	if m.selected != "" {
-		var status string
-		if m.editing {
-			status = styleHeading.Render("✎ Edit Commit Message")
-			status += "\n" + styleListItem.Render("Edit and use the following commit message:") + "\n\n"
-		} else {
-			status = styleHeading.Render("✓ Selected Commit Message")
-			status += "\n" + styleListItem.Render("Selected commit message:") + "\n\n"
-		}
-		return status + styleSelectedItem.Render(m.selected) + "\n"
+		return mainStyle.Render(
+			lipgloss.JoinVertical(lipgloss.Left,
+				styleHeading.Render("✓ Selected Commit Message"),
+				styleSelectedItem.Render(m.selected),
+				styleHelp.Render("Press enter to confirm"),
+			),
+		)
 	}
 
-	help := strings.Join([]string{
-		"↑/↓: navigate",
-		"enter: select",
-		"e: edit",
-		"r: reload",
-		"q: quit",
-	}, " • ")
+	// Render messages
+	var items []string
+	for i, msg := range m.messages {
+		if i == m.cursor {
+			items = append(items, styleSelectedItem.Render(msg))
+		} else {
+			items = append(items, styleListItem.Render(msg))
+		}
+	}
 
-	return strings.Join([]string{
-		styleHeading.Render("✨ Select Commit Message"),
-		m.list.View(),
-		styleHelp.Render(help),
-	}, "\n")
+	help := lipgloss.JoinHorizontal(lipgloss.Center,
+		"↑/↓: navigate",
+		" • ",
+		"enter: select",
+		" • ",
+		"e: edit",
+		" • ",
+		"q: quit",
+	)
+
+	return mainStyle.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			styleHeading.Render("✨ Select Commit Message"),
+			lipgloss.JoinVertical(lipgloss.Left, items...),
+			styleHelp.Render(help),
+		),
+	)
 }
 
 func (m CommitMessageModel) IsEditing() bool {
@@ -177,4 +189,4 @@ func (m CommitMessageModel) IsEditing() bool {
 
 func (m CommitMessageModel) Selected() string {
 	return m.selected
-} 
+}
