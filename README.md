@@ -1,6 +1,6 @@
 # quill
 
-![quill](https://raw.githubusercontent.com/jabafett/quill/main/docs/logo/quill-full-logo-50.png, "quill")
+![quill](https://github.com/jabafett/quill/blob/main/docs/logo/quill-full-logo-50.png?raw=true, "quill")
 
 [Features](#features) &middot;
 [Quick Start](#quick-start) &middot;
