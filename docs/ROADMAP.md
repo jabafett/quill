@@ -34,11 +34,11 @@
 - [x] Cross-reference tracking
 - [x] File complexity analysis
 - [x] Historical change pattern analysis
-- [x] Contributor impact tracking
+- [x] Contributor tracking
 - [ ] Semantic relationship mapping (close)
 - [ ] Code pattern recognition (close)
 
-### Context Management
+### Context Management (In Progress)
 - [x] File-level context caching with TTL
 - [x] Badger-based persistent storage
 - [x] Concurrent context processing
@@ -74,6 +74,7 @@
 - [ ] Cache warming strategies
 
 ### Team Collaboration
+- [ ] Code ownership tracking
 - [ ] Shared context models
 - [ ] Team knowledge base building
 - [ ] Commit pattern learning
@@ -91,7 +92,7 @@
 
 ### Integration
 - [ ] CI/CD plugins
-- [ ] IDE extensions (VSCode, JetBrains)
+- [ ] IDE extensions (JetBrains, VSCode, etc.)
 - [ ] Git hosting platform integration
 - [ ] Issue tracker integration
 - [ ] Custom workflow hooks
