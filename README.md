@@ -1,22 +1,11 @@
-<p align="center">
-    <img width="200" alt="Quill Logo" src="docs/logo/quill_full_logo_50.png">
-</p>
+# quill
 
-<p align="center" style="font-size: larger">
-  <h1>quill</h1>
-</p>
+![quill](https://raw.githubusercontent.com/jabafett/quill/main/docs/logo/quill-full-logo-50.png, "quill")
 
-<p align="center">
-  <strong>AI-Powered Git Commit Message Generator</strong>
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#commands">Commands</a> •
-  <a href="#providers">Providers</a> •
-  <a href="#contributing">Contributing</a>
-</p>
+[Features](#features) &middot;
+[Quick Start](#quick-start) &middot;
+[Commands](#commands) &middot;
+[Contributing](#contributing)
 
 `quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
@@ -175,7 +164,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+  [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
