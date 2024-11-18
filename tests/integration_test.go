@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jabafett/quill/internal/ai"
+	"github.com/jabafett/quill/internal/factories"
+	"github.com/jabafett/quill/internal/utils/ai"
 	"github.com/jabafett/quill/tests/mocks"
 )
 
@@ -20,7 +21,7 @@ func TestGenerateWorkflow(t *testing.T) {
 		},
 	}
 
-	provider := ai.GetRateLimitedProvider(mock, true)
+	provider := factories.GetRateLimitedProvider(mock, true)
 
 	ctx := context.Background()
 	testDiff := "diff --git a/test.go b/test.go\n+test content"

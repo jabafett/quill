@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jabafett/quill/internal/ai"
+	"github.com/jabafett/quill/internal/factories"
+	"github.com/jabafett/quill/internal/utils/ai"
 	"github.com/jabafett/quill/tests/mocks"
 )
 
@@ -29,7 +30,7 @@ func TestRateLimiting(t *testing.T) {
 		},
 	}
 
-	provider := ai.GetRateLimitedProvider(mock, false)
+	provider := factories.GetRateLimitedProvider(mock, false)
 
 	ctx := context.Background()
 	start := time.Now()
@@ -60,7 +61,7 @@ func TestRetryBehavior(t *testing.T) {
 		},
 	}
 
-	provider := ai.GetRateLimitedProvider(mock, true)
+	provider := factories.GetRateLimitedProvider(mock, true)
 
 	ctx := context.Background()
 	result, err := provider.Generate(ctx, testPrompt, ai.GenerateOptions{})
@@ -86,7 +87,7 @@ func TestRetryDisabled(t *testing.T) {
 		},
 	}
 
-	provider := ai.GetRateLimitedProvider(mock, false)
+	provider := factories.GetRateLimitedProvider(mock, false)
 
 	ctx := context.Background()
 	_, err := provider.Generate(ctx, testPrompt, ai.GenerateOptions{})

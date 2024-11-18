@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/jabafett/quill/internal/ai"
+	"github.com/jabafett/quill/internal/utils/ai"
 )
 
 type MockGeminiProvider struct {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jabafett/quill/internal/debug"
+	"github.com/jabafett/quill/internal/utils/debug"
 )
 
 func TestDebugOutput(t *testing.T) {
