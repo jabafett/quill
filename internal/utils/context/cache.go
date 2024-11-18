@@ -62,7 +62,6 @@ func (c *Cache) Get(path string) *FileContext {
 			return json.Unmarshal(val, &ctx)
 		})
 	})
-
 	if err != nil {
 		return nil
 	}
