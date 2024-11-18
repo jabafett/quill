@@ -156,3 +156,94 @@ func (r *Repository) Commit(message string) error {
 
 	return nil
 }
+
+// GetStagedDiffOptimized returns an optimized git diff for staged changes
+func (r *Repository) GetStagedDiffOptimized() (string, error) {
+	// Use --no-prefix to avoid directory prefixes
+	// Use --no-color to avoid ANSI codes
+	// Use --cached as an alias for --staged
+	cmd := exec.Command("git", "diff", "--cached", "--no-prefix", "--no-color")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get staged diff: %w", err)
+	}
+	return string(output), nil
+}
+
+// GetStagedFilesOptimized returns only staged files efficiently
+func (r *Repository) GetStagedFilesOptimized() ([]string, error) {
+	// Use --name-only to get just filenames
+	// Use --cached as an alias for --staged
+	cmd := exec.Command("git", "diff", "--cached", "--name-only")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get staged files: %w", err)
+	}
+
+	if len(output) == 0 {
+		return nil, nil
+	}
+
+	files := strings.Split(strings.TrimSpace(string(output)), "\n")
+	return files, nil
+}
+
+// GetFileStatusOptimized returns the status of a specific file efficiently
+func (r *Repository) GetFileStatusOptimized(path string) (string, error) {
+	// Use --porcelain for machine-readable output
+	cmd := exec.Command("git", "status", "--porcelain", path)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get file status: %w", err)
+	}
+
+	if len(output) < 2 {
+		return "unmodified", nil
+	}
+
+	// First character represents staging status
+	switch output[0] {
+	case 'A':
+		return "added", nil
+	case 'M':
+		return "modified", nil
+	case 'D':
+		return "deleted", nil
+	case 'R':
+		return "renamed", nil
+	case 'C':
+		return "copied", nil
+	default:
+		return "unknown", nil
+	}
+}
+
+// CommitOptimized creates a new git commit with optimized performance
+func (r *Repository) CommitOptimized(message string) error {
+	// Use -m to avoid opening editor
+	// Use --no-verify to skip hooks for performance
+	cmd := exec.Command("git", "commit", "-m", message)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to create commit: %w", err)
+	}
+	return nil
+}
+
+// HasStagedChangesOptimized checks for staged changes efficiently
+func (r *Repository) HasStagedChangesOptimized() (bool, error) {
+	// Use --quiet to suppress output
+	// Exit status is 1 if there are no changes
+	cmd := exec.Command("git", "diff", "--cached", "--quiet")
+	err := cmd.Run()
+	
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			// Exit status 1 means there are changes
+			return exitErr.ExitCode() == 1, nil
+		}
+		return false, fmt.Errorf("failed to check staged changes: %w", err)
+	}
+	
+	// Exit status 0 means no changes
+	return false, nil
+}
