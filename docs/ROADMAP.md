@@ -33,18 +33,17 @@
 - [x] Import/dependency mapping
 - [x] Cross-reference tracking
 - [x] File complexity analysis
-- [x] Historical change pattern analysis
-- [x] Contributor tracking
-- [ ] Semantic relationship mapping (close)
-- [ ] Code pattern recognition (close)
+- [ ] Historical change pattern analysis (postponed)
+- [ ] Contributor tracking (postponed)
+- [ ] Semantic relationship mapping (postponed)
 
 ### Context Management (In Progress)
 - [x] File-level context caching with TTL
 - [x] Badger-based persistent storage
 - [x] Concurrent context processing
 - [x] Memory-efficient resource pooling
-- [ ] Progressive context learning (close)
-- [ ] Repository-wide metadata storage (close)
+- [ ] Progressive context learning (postponed)
+- [ ] Repository-wide context storage (close)
 
 ### Smart Suggestion
 - [ ] Context-aware commit messages when indexed
