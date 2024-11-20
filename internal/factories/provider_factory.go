@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"golang.org/x/time/rate"
-	"github.com/jabafett/quill/internal/utils/config"
+
 	"github.com/jabafett/quill/internal/utils/ai"
+	"github.com/jabafett/quill/internal/utils/config"
+	"golang.org/x/time/rate"
 )
 
 // Provider defines the interface for AI providers
@@ -29,7 +30,7 @@ func (p *rateLimitedProvider) Generate(ctx context.Context, prompt string, opts 
 }
 
 // CreateProvider creates a new AI provider instance
-func NewProvider(cfg *config.Config) (Provider, error) {
+func NewProvider(cfg *config.Config, opts GenerateOptions) (Provider, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
@@ -39,6 +40,16 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	options, err := config.ConfigToOptions(cfg, name)
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.Candidates > 0 {
+		options.CandidateCount = opts.Candidates
+	}
+	if opts.Temperature > 0 {
+		options.Temperature = opts.Temperature
+	}
+	if opts.Provider != "" {
+		name = opts.Provider
 	}
 
 	var baseProvider Provider
