@@ -11,7 +11,7 @@ The commit message should:
 - Separate subject from body with a blank line
 - Limit the subject line to 72 characters
 - Use imperative mood ("add" not "added", "change" not "changed")
-- Use body to explain what and why vs. how
+- Use body to explain what and why things were changed/added not how
 - Be specific about what files were changed and how
 - Focus only on the actual changes shown in the diff
 - Include only factual information from the diff

@@ -7,9 +7,8 @@ import (
         "strconv"
         "strings"
 
-        "github.com/go-git/go-git/v5"
-        d "github.com/jabafett/quill/internal/utils/debug"
-        "github.com/jabafett/quill/internal/utils/helpers"
+	"github.com/go-git/go-git/v5"
+	"github.com/jabafett/quill/internal/utils/helpers"
 )
 
 type Repository struct {
@@ -17,12 +16,12 @@ type Repository struct {
 }
 
 // NewRepository creates a new Repository instance
-func NewRepository(repoPath string) (*Repository, error) {
-        r, err := git.PlainOpen(repoPath)
-        if err != nil {
-                return nil, err
-        }
-        return &Repository{repo: r}, nil
+func NewRepository() (*Repository, error) {
+	r, err := git.PlainOpen(".")
+	if err != nil {
+		return nil, err
+	}
+	return &Repository{repo: r}, nil
 }
 
 // GetStagedDiff returns the git diff for staged changes
@@ -86,7 +85,7 @@ func (r *Repository) HasStagedChanges() (bool, error) {
                 }
         }
 
-        return false, helpers.ErrNoStagedChanges{}
+	return false, helpers.ErrNoStagedChanges{}
 }
 
 // GetRepoRootPath returns the absolute path to the repository's root directory
