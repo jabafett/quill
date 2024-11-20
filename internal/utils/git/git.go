@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/jabafett/quill/internal/utils/helpers"
 )
 
 type Repository struct {
@@ -17,7 +18,7 @@ type Repository struct {
 func NewRepository() (*Repository, error) {
 	r, err := git.PlainOpen(".")
 	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %w", err)
+		return nil, err
 	}
 	return &Repository{repo: r}, nil
 }
@@ -63,11 +64,7 @@ func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []strin
 	return added, deleted, files, nil
 }
 
-// IsGitRepo checks if the current directory is a git repository
-func IsGitRepo() bool {
-	_, err := git.PlainOpen(".")
-	return err == nil
-}
+
 
 // HasStagedChanges checks if there are any staged changes
 func (r *Repository) HasStagedChanges() (bool, error) {
@@ -87,7 +84,7 @@ func (r *Repository) HasStagedChanges() (bool, error) {
 		}
 	}
 
-	return false, nil
+	return false, helpers.ErrNoStagedChanges{}
 }
 
 // GetChangedFiles returns a list of modified files

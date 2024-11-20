@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -27,7 +26,7 @@ func TestUIStyles(t *testing.T) {
 	}
 
 	// Test error state
-	spinner.Error(fmt.Errorf("test error"))
+	spinner.Error("test error")
 	view = spinner.View()
 	if !strings.Contains(view, "✗") || !strings.Contains(view, "test error") {
 		t.Error("Error view should contain X and error message")

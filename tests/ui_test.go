@@ -85,7 +85,7 @@ func TestProgressSpinner(t *testing.T) {
 
 	// Test error handling
 	testError := fmt.Errorf("test error")
-	spinner.Error(testError)
+	spinner.Error("test error")
 	view = spinner.View()
 	if !strings.Contains(view, testError.Error()) {
 		t.Errorf("Expected spinner view to contain error: %s", testError)
