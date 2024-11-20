@@ -6,7 +6,7 @@ const (
 The commit message should:
 - Separate subject from body with a blank line
 - Use imperative mood ("add" not "added", "change" not "changed")
-- Use body to explain what and why vs. how
+- Use body to explain what and why things were changed/added not how
 - Be specific about what files were changed and how
 - Do not capitalize the first letter of the commit message
 - Keep each line under 72 characters
@@ -16,6 +16,7 @@ The commit message should:
 - Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
 - Reference issues and PRs in footer when applicable
+- The description, body, nor the footer should contain the files changed focus on the changes
 
 Types:
 feat: New features that add functionality (e.g., "feat(auth): add password reset flow")

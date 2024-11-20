@@ -14,7 +14,7 @@ import (
 type ProgressSpinner struct {
 	spinner spinner.Model
 	message string
-	err     error
+	err     string
 	done    bool
 }
 
@@ -32,7 +32,7 @@ func NewProgressSpinner() *ProgressSpinner {
 // Start begins the spinner animation with the given message
 func (p *ProgressSpinner) Start(message string) {
 	p.message = message
-	p.err = nil
+	p.err = ""
 	p.done = false
 }
 
@@ -40,21 +40,21 @@ func (p *ProgressSpinner) Start(message string) {
 func (p *ProgressSpinner) Success(message string) {
 	p.message = message
 	p.done = true
-	p.err = nil
+	p.err = ""
 }
 
 // Error displays an error message and stops the spinner
-func (p *ProgressSpinner) Error(err error) {
-	p.err = err
+func (p *ProgressSpinner) Error(s string) {
+	p.err = s
 	p.done = true
 }
 
 // View returns the current view of the spinner
 func (p *ProgressSpinner) View() string {
-	if p.err != nil {
+	if p.err != "" {
 		return strings.Join([]string{
 			styleHeading.Render("✗ Error"),
-			styleError.Render("Error: " + p.err.Error()),
+			styleError.Render("Error: " + p.err),
 		}, "\n")
 	}
 	if p.done {
@@ -81,6 +81,6 @@ func (p *ProgressSpinner) Update(msg tea.Msg) tea.Cmd {
 // Retry begins the spinner animation with the given message
 func (p *ProgressSpinner) Retry(message string) {
 	p.message = message
-	p.err = nil
+	p.err = ""
 	p.done = false
 }

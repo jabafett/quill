@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -104,7 +105,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no commit message selected")
 	}
 
-	// Create git commit
+	// Commit selected message
+	err = exec.Command("git", "commit", "-m", selectedModel.Selected()).Run()
+	if err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
 
 	cmd.Printf("Successfully created commit: %s\n", selectedModel.Selected())
 	return nil

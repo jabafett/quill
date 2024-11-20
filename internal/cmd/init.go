@@ -73,25 +73,25 @@ func GetProviderConfig(provider string) string {
 	case "gemini":
 		return `    model = "gemini-1.5-flash-002"
     max_tokens = 8192
-    temperature = 0.3
+    temperature = 0.5
     enable_retries = false
     candidate_count = 2`
 	case "anthropic":
 		return `    model = "claude-3-sonnet-20240229"
     max_tokens = 8192
-    temperature = 0.3
+    temperature = 0.5
     enable_retries = false
     candidate_count = 2`
 	case "openai":
 		return `    model = "gpt-4"
     max_tokens = 8192
-    temperature = 0.3
+    temperature = 0.5
     enable_retries = false
     candidate_count = 2`
 	case "ollama":
 		return `    model = "qwen2.5-8b-instruct"
     max_tokens = 8192
-    temperature = 0.3
+    temperature = 0.5
     enable_retries = true
     candidate_count = 3`
 	default:
@@ -108,7 +108,7 @@ retry_attempts = 3
 # Default number of candidates to generate (0-3)
 default_candidates = 2
 # Maximum diff size for processing
-max_diff_size = "1MB"
+max_diff_size = "500MB"
 # Default provider
 default_provider = "%s"
 
