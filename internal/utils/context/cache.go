@@ -3,8 +3,6 @@ package context
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	badger "github.com/dgraph-io/badger/v4"
@@ -21,21 +19,13 @@ type Cache struct {
 
 // NewCache creates a new cache instance using Badger
 func NewCache() (*Cache, error) {
-	cacheDir := filepath.Join(os.TempDir(), "quill-cache")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create cache directory: %w", err)
-	}
-	return NewCacheWithPath(cacheDir)
-}
-
-// NewCacheWithPath creates a new cache instance using Badger with a custom path
-func NewCacheWithPath(path string) (*Cache, error) {
-	opts := badger.DefaultOptions(path)
+	// Open Badger database with persistent storage
+	opts := badger.DefaultOptions("./cache") // Store in ./cache directory
 	opts.NumMemtables = 2
 	opts.NumLevelZeroTables = 2
 	opts.NumLevelZeroTablesStall = 3
-	opts.ValueLogFileSize = 10 << 20
-	opts.BaseTableSize = 20 << 20
+	opts.ValueLogFileSize = 10 << 20  // 10MB
+	opts.BaseTableSize = 20 << 20     // 20MB
 	opts.SyncWrites = true
 
 	db, err := badger.Open(opts)
@@ -44,7 +34,10 @@ func NewCacheWithPath(path string) (*Cache, error) {
 	}
 
 	cache := &Cache{db: db}
+
+	// Start garbage collection
 	go cache.runGC()
+
 	return cache, nil
 }
 

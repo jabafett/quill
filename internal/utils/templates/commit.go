@@ -4,14 +4,14 @@ package templates
 const (
 	CommitMessageTemplate = `Your task is to generate a commit message.
 The commit message should:
+- Keep the first line under 72 characters
+- No periods or other punctuation at the end of any lines
+- Do not capitalize the first letter of the commit message
+- The scope should not be the name of the file
 - Separate subject from body with a blank line
 - Use imperative mood ("add" not "added", "change" not "changed")
 - Use body to explain what and why vs. how
 - Be specific about what files were changed and how
-- Do not capitalize the first letter of the commit message
-- Keep each line under 72 characters
-- No periods or other punctuation at the end of any lines
-- The scope should not be the name of a file
 - Focus only on the actual changes shown in the diff
 - Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
@@ -30,7 +30,7 @@ chore: Maintenance tasks, dependencies, build changes (no production code change
 Template:
 <type>(<scope>): <description>
 
-- subject body
+[optional body]
 
 [optional footer(s)]
 

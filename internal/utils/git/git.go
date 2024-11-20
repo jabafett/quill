@@ -43,7 +43,7 @@ func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []strin
 	// Parse the numstat output
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	files = make([]string, 0, len(lines))
-
+	
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -59,7 +59,7 @@ func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []strin
 			files = append(files, parts[2])
 		}
 	}
-
+	
 	return added, deleted, files, nil
 }
 
@@ -235,7 +235,7 @@ func (r *Repository) HasStagedChangesOptimized() (bool, error) {
 	// Exit status is 1 if there are no changes
 	cmd := exec.Command("git", "diff", "--cached", "--quiet")
 	err := cmd.Run()
-
+	
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			// Exit status 1 means there are changes
@@ -243,7 +243,7 @@ func (r *Repository) HasStagedChangesOptimized() (bool, error) {
 		}
 		return false, fmt.Errorf("failed to check staged changes: %w", err)
 	}
-
+	
 	// Exit status 0 means no changes
 	return false, nil
 }
