@@ -13,7 +13,6 @@ type Factory struct {
 	Repo       *git.Repository
 	Templates  *TemplateFactory
 	Provider   Provider
-	Context    *ContextEngine
 }
 
 // NewFactory creates a new factory instance
@@ -55,18 +54,11 @@ func NewFactory() (*Factory, error) {
 		return nil, fmt.Errorf("git repository is nil")
 	}
 
-	// Create context engine
-	contextEngine, err := NewContextEngine()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create context engine: %w", err)
-	}
-
 	f := &Factory{
 		Config:     cfg,
 		Repo:       repo,
 		Templates:  templateFactory,
 		Provider:   provider,
-		Context:    contextEngine,
 	}
 
 	return f, nil
