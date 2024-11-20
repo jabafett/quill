@@ -5,18 +5,18 @@ const (
 	CommitMessageTemplate = `Your task is to generate a commit message.
 The commit message should:
 - Separate subject from body with a blank line
+- Limit the subject line to 72 characters
 - Use imperative mood ("add" not "added", "change" not "changed")
 - Use body to explain what and why things were changed/added not how
-- Be specific about what files were changed and how
+- Be specific about what was changed and how
 - Do not capitalize the first letter of the commit message
-- Keep each line under 72 characters
 - No periods or other punctuation at the end of any lines
 - The scope should not be the name of a file
 - Focus only on the actual changes shown in the diff
 - Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
 - Reference issues and PRs in footer when applicable
-- The description, body, nor the footer should contain the files changed focus on the changes
+- The description, body, nor the footer should contain the filename or path
 
 Types:
 feat: New features that add functionality (e.g., "feat(auth): add password reset flow")

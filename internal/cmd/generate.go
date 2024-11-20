@@ -47,8 +47,6 @@ func init() {
 
 func runGenerate(cmd *cobra.Command, args []string) error {
 	debug.Log("Starting generate command")
-	spinner := ui.NewProgressSpinner()
-	spinner.Start("Initializing...")
 
 	// Get flag values
 	providerVal, candidatesVal, temperatureVal, err := helpers.SetGenerateFlagValues[string, int, float32](
@@ -69,25 +67,20 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "no git repository found") {
-			spinner.Error("No git repository found")
 			return fmt.Errorf("no git repository found")
 		}
 		return fmt.Errorf("failed to create generate factory: %w", err)
 	}
 
-	spinner.Start("Analyzing changes and generating commit messages...")
 
 	// Generate messages
 	msgs, err := generator.Generate(context.Background())
 	if err != nil {
 		if _, ok := err.(helpers.ErrNoStagedChanges); ok {
-			spinner.Error("No staged changes found")
 			return fmt.Errorf("no staged changes found")
 		}
 		return fmt.Errorf("failed to generate commit messages: %w", err)
 	}
-
-	spinner.Success("Generated commit messages")
 
 	// Create an interactive model for message selection
 	model := ui.NewCommitMessageModel(msgs)
@@ -105,6 +98,10 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	selectedModel := finalModel.(ui.CommitMessageModel)
 	if selectedModel.Selected() == "" {
 		return fmt.Errorf("no commit message selected")
+	}
+	if selectedModel.Quitting() {
+		fmt.Print("\033[H\033[2J")
+		return fmt.Errorf("operation cancelled")
 	}
 
 	// Commit selected message

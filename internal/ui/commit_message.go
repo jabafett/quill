@@ -189,3 +189,7 @@ func (m CommitMessageModel) IsEditing() bool {
 func (m CommitMessageModel) Selected() string {
 	return m.selected
 }
+
+func (m CommitMessageModel) Quitting() bool {
+	return m.quitting
+}
