@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"sync"
 	"time"
-	c "context"
 	"github.com/jabafett/quill/internal/utils/context"
 )
 
@@ -15,7 +14,6 @@ type AnalyzerOptions struct {
 	MaxConcurrency int    // Maximum number of concurrent analysis routines
 	CacheEnabled   bool   // Whether to use caching
 	BasePath       string // Base path for relative imports
-	CachePath      string // Add cache path option
 }
 
 // ContextEngine manages codebase context extraction and caching
@@ -28,31 +26,21 @@ type ContextEngine struct {
 
 // NewContextEngine creates a new context engine instance
 func NewContextEngine(opts ...func(*AnalyzerOptions)) (*ContextEngine, error) {
-	var cache *context.Cache
-	var err error
-	
+	cache, err := context.NewCache()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cache: %w", err)
+	}
+
 	// Default options
 	options := AnalyzerOptions{
 		MaxConcurrency: runtime.NumCPU(),
 		CacheEnabled:   true,
 		BasePath:       "",
-		CachePath:      "",
 	}
 
 	// Apply option overrides
 	for _, opt := range opts {
 		opt(&options)
-	}
-
-	if options.CacheEnabled {
-		if options.CachePath != "" {
-			cache, err = context.NewCacheWithPath(options.CachePath)
-		} else {
-			cache, err = context.NewCache()
-		}
-		if err != nil {
-			return nil, fmt.Errorf("failed to create cache: %w", err)
-		}
 	}
 
 	return &ContextEngine{
@@ -65,10 +53,6 @@ func NewContextEngine(opts ...func(*AnalyzerOptions)) (*ContextEngine, error) {
 
 // ExtractContext analyzes files and builds context
 func (e *ContextEngine) ExtractContext(files []string) (*context.Context, error) {
-	if len(files) == 0 {
-		return nil, fmt.Errorf("no files to analyze")
-	}
-
 	ctx := &context.Context{
 		Files:      make(map[string]*context.FileContext),
 		UpdatedAt:  time.Now(),
@@ -77,13 +61,13 @@ func (e *ContextEngine) ExtractContext(files []string) (*context.Context, error)
 		Errors:     make([]context.Error, 0),
 	}
 
-	// Create buffered channels
+	// Create worker pool
+	numWorkers := e.options.MaxConcurrency
 	filesChan := make(chan string, len(files))
 	resultsChan := make(chan *analyzeResult, len(files))
 	errorsChan := make(chan context.Error, len(files))
 
-	// Start workers with limited concurrency
-	numWorkers := min(e.options.MaxConcurrency, len(files))
+	// Start workers
 	var wg sync.WaitGroup
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
@@ -96,7 +80,7 @@ func (e *ContextEngine) ExtractContext(files []string) (*context.Context, error)
 	}
 	close(filesChan)
 
-	// Wait for completion in a separate goroutine
+	// Wait for all workers to complete
 	go func() {
 		wg.Wait()
 		close(resultsChan)
@@ -130,10 +114,6 @@ type analyzeResult struct {
 func (e *ContextEngine) analyzeWorker(files <-chan string, results chan<- *analyzeResult, errors chan<- context.Error, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// Create new context for each analysis
-	ctx, cancel := c.WithCancel(c.Background())
-	defer cancel()
-
 	for path := range files {
 		result := &analyzeResult{path: path}
 
@@ -146,26 +126,19 @@ func (e *ContextEngine) analyzeWorker(files <-chan string, results chan<- *analy
 			}
 		}
 
-
-		// Analyze file with proper error handling
-		fileCtx, err := e.analyzer.Analyze(ctx, path)
+		// Analyze file
+		fileCtx, err := e.analyzer.Analyze(path)
 		if err != nil {
 			errors <- context.Error{
 				Path:    path,
 				Message: err.Error(),
 			}
-			cancel()
 			continue
 		}
 
 		// Cache the result if enabled
-		if e.options.CacheEnabled && fileCtx != nil {
-			if err := e.cache.Set(path, fileCtx); err != nil {
-				errors <- context.Error{
-					Path:    path,
-					Message: fmt.Sprintf("failed to cache: %v", err),
-				}
-			}
+		if e.options.CacheEnabled {
+			e.cache.Set(path, fileCtx)
 		}
 
 		result.fileCtx = fileCtx
@@ -219,18 +192,4 @@ func WithBasePath(path string) func(*AnalyzerOptions) {
 	return func(opts *AnalyzerOptions) {
 		opts.BasePath = path
 	}
-}
-
-func WithCachePath(path string) func(*AnalyzerOptions) {
-	return func(opts *AnalyzerOptions) {
-		opts.CachePath = path
-	}
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 } 
