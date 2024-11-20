@@ -2,7 +2,7 @@ package ui
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,7 +46,7 @@ var keys = keyMap{
 type CommitMessageModel struct {
 	messages []string
 	cursor   int
-	input    textinput.Model
+	input    textarea.Model
 	keys     keyMap
 	selected string
 	quitting bool
@@ -56,24 +56,23 @@ type CommitMessageModel struct {
 }
 
 func NewCommitMessageModel(messages []string) CommitMessageModel {
-	ti := textinput.New()
-	ti.Placeholder = "Edit commit message..."
-	ti.CharLimit = 200
-	ti.Width = 50
-	ti.PromptStyle = lipgloss.NewStyle().Foreground(primaryColor)
-	ti.TextStyle = lipgloss.NewStyle().Foreground(textColor)
-	ti.PlaceholderStyle = lipgloss.NewStyle().Foreground(dimmedColor)
-	ti.Cursor.Style = lipgloss.NewStyle().Foreground(primaryColor)
+	ta := textarea.New()
+	ta.Placeholder = "Edit commit message..."
+	ta.SetWidth(50)
+	ta.SetHeight(5)
+	ta.ShowLineNumbers = true
+	ta.Prompt = "┃ "
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle().Background(lipgloss.Color("#333333"))
 
 	return CommitMessageModel{
 		messages: messages,
-		input:    ti,
+		input:    ta,
 		keys:     keys,
 	}
 }
 
 func (m CommitMessageModel) Init() tea.Cmd {
-	return textinput.Blink
+	return textarea.Blink
 }
 
 func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -81,7 +80,7 @@ func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.input.Width = m.width - 4
+		m.input.SetWidth(m.width - 4)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -120,7 +119,7 @@ func (m CommitMessageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.editing = true
 			m.input.SetValue(m.messages[m.cursor])
 			m.input.Focus()
-			return m, textinput.Blink
+			return m, textarea.Blink
 		}
 	}
 
