@@ -84,10 +84,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Create an interactive model for message selection
 	model := ui.NewCommitMessageModel(msgs)
-	p := tea.NewProgram(
-		model,
-		tea.WithMouseCellMotion(), // Enable mouse support
-	)
+	p := tea.NewProgram(model, tea.WithFPS(120))
 
 	finalModel, err := p.Run()
 	if err != nil {

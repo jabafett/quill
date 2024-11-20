@@ -4,13 +4,17 @@ package templates
 const (
 	CommitMessageTemplate = `Your task is to generate a commit message for the given information. Please do not hallucinate.
 The commit message should:
+- Keep the first line under 72 characters
+- No periods or other punctuation at the end of any lines
+- Do not capitalize the first letter of the commit message
+- The scope should not be the name of the file
 - Separate subject from body with a blank line
 - Limit the subject line to 72 characters
 - Use imperative mood ("add" not "added", "change" not "changed")
-- Use body to explain what and why things were changed/added not how
-- Be specific about what was changed and how
-- Do not capitalize the first letter of the commit message
-- No periods or other punctuation at the end of any lines
+- Use body to explain what and why vs. how
+- Be specific about what files were changed and how
+- Focus only on the actual changes shown in the diff
+- Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
 - Please refrain from discussing formatting changes nor inferences about the scope of the change through code that has only been reformatted (e.g., indentation, line length, etc.)
 - Sift through the noise in the diff and information provided to zero in on what was modified, added, or removed

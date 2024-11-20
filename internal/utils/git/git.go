@@ -43,27 +43,27 @@ func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []strin
                 return 0, 0, nil, fmt.Errorf("failed to get diff stats: %w", err)
         }
 
-        // Parse the numstat output
-        lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-        files = make([]string, 0, len(lines))
-
-        for _, line := range lines {
-                if line == "" {
-                        continue
-                }
-                parts := strings.Fields(line)
-                if len(parts) >= 3 {
-                        if a, err := strconv.Atoi(parts[0]); err == nil {
-                                added += a
-                        }
-                        if d, err := strconv.Atoi(parts[1]); err == nil {
-                                deleted += d
-                        }
-                        files = append(files, parts[2])
-                }
-        }
-
-        return added, deleted, files, nil
+	// Parse the numstat output
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	files = make([]string, 0, len(lines))
+	
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) >= 3 {
+			if a, err := strconv.Atoi(parts[0]); err == nil {
+				added += a
+			}
+			if d, err := strconv.Atoi(parts[1]); err == nil {
+				deleted += d
+			}
+			files = append(files, parts[2])
+		}
+	}
+	
+	return added, deleted, files, nil
 }
 
 
