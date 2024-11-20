@@ -209,7 +209,7 @@ export OPENAI_API_KEY="your-key"
 
 ## Contributing
 
-See [Contributing Guidelines](docs/CONTRIBUTING.md) and [Roadmap](docs/ROADMAP.md).
+See [Roadmap](ROADMAP.md).
 
 ## License
 
