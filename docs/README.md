@@ -213,7 +213,7 @@ See [Roadmap](ROADMAP.md).
 
 ## License
 
-Copyright [2024] [jabafett]
+Copyright 2024 jabafett
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file or repository except in compliance with the License.
