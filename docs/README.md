@@ -200,7 +200,7 @@ When selecting commit messages:
 
 ## Contributing
 
-See [Contributing Guidelines](docs/CONTRIBUTING.md) and [Roadmap](docs/ROADMAP.md).
+See [Roadmap](ROADMAP.md).
 
 ## License
 
