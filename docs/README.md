@@ -45,6 +45,54 @@ quill generate
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
 
+## Release Notes
+
+### Version 0.1.0 🎉 (Initial Release)
+
+This is the initial release of Quill, focusing on core functionality and provider integration. The following features are now available:
+
+#### Core Features
+- 🛠️ Basic Commands: `init`, `generate`, and `config` commands are fully implemented
+- 🤖 Multi-Provider Support:
+  - Google Gemini
+  - Anthropic Claude
+  - OpenAI
+  - Ollama
+- 🔐 Secure Configuration:
+  - API keys stored in system keyring
+  - TOML-based configuration
+  - Provider-specific settings
+- 🎨 Interactive UI:
+  - Beautiful terminal interface
+  - Message selection
+  - Message editing
+
+#### Technical Improvements
+- ⚡ Performance Features:
+  - Rate limiting (1 request/second)
+  - Retry mechanism with backoff
+  - File-level context caching
+  - Memory-efficient processing
+- 🔍 Context Analysis:
+  - File-level context extraction
+  - Multi-language support
+  - Code symbol extraction
+  - Import/dependency mapping
+  - Cross-reference tracking
+
+#### Known Limitations
+- Only basic commands (`init`, `generate`, `config`) are available
+- Advanced features like indexing and smart suggestions are still in development
+- Some context features (historical analysis, contributor tracking) are postponed
+
+#### Installation
+```bash
+go install github.com/jabafett/quill@v0.1.0
+
+# Initialize (interactive setup)
+quill init
+```
+
 ## Configuration
 
 Configuration is stored in either:
@@ -123,11 +171,6 @@ Available settings:
 - `enable_retries`: Enable automatic retry on failure
 - `candidate_count`: Default number of suggestions
 
-### Rate Limiting & Retries
-
-- Rate limiting: 1 request per second
-- Retries: Up to 3 attempts with exponential backoff
-- Configurable per provider via `enable_retries`
 
 ### Environment Variables
 
