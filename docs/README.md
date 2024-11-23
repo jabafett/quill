@@ -6,6 +6,8 @@ Currently in development, only: `init`, `generate`, `config` commands are availa
 
 `quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
+![image](https://github.com/user-attachments/assets/ae3ccf4e-a42b-41b7-991e-8a41ea91a04d)
+
 [Features](#features) &middot;
 [Quick Start](#quick-start) &middot;
 [Commands](#commands) &middot;
