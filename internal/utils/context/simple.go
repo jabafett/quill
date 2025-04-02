@@ -25,7 +25,7 @@ type RepoSummary struct {
 
 // SimpleContext provides basic repository context without complex analysis
 type SimpleContext struct {
-	RepoRoot string
+	RepoRoot  string
 	CachePath string
 }
 
@@ -36,9 +36,9 @@ func NewSimpleContext(repoRoot string) (*SimpleContext, error) {
 	}
 
 	cachePath := filepath.Join(repoRoot, ".git", "quill-summary.json")
-	
+
 	return &SimpleContext{
-		RepoRoot: repoRoot,
+		RepoRoot:  repoRoot,
 		CachePath: cachePath,
 	}, nil
 }
@@ -54,25 +54,25 @@ func (sc *SimpleContext) GetDirectoryTree(maxDepth int) (string, error) {
 	// Format the output
 	dirs := strings.Split(strings.TrimSpace(string(output)), "\n")
 	var tree strings.Builder
-	
+
 	for _, dir := range dirs {
 		// Skip the root directory
 		if dir == sc.RepoRoot {
 			continue
 		}
-		
+
 		// Calculate relative path and indentation
 		relPath, err := filepath.Rel(sc.RepoRoot, dir)
 		if err != nil {
 			continue
 		}
-		
+
 		depth := len(strings.Split(relPath, string(filepath.Separator))) - 1
 		indent := strings.Repeat("  ", depth)
-		
+
 		tree.WriteString(fmt.Sprintf("%s- %s\n", indent, filepath.Base(dir)))
 	}
-	
+
 	return tree.String(), nil
 }
 
@@ -85,9 +85,9 @@ func (sc *SimpleContext) GetFileInfo() (map[string]int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file list: %w", err)
 	}
-	
+
 	files := strings.Split(strings.TrimSpace(string(output)), "\n")
-	
+
 	// Count files by extension
 	extensions := make(map[string]int)
 	for _, file := range files {
@@ -97,7 +97,7 @@ func (sc *SimpleContext) GetFileInfo() (map[string]int, error) {
 		}
 		extensions[ext]++
 	}
-	
+
 	return extensions, nil
 }
 
@@ -107,7 +107,7 @@ func (sc *SimpleContext) GetLanguageInfo() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Map extensions to languages (simplified)
 	extToLang := map[string]string{
 		".go":   "Go",
@@ -131,7 +131,7 @@ func (sc *SimpleContext) GetLanguageInfo() ([]string, error) {
 		".yaml": "YAML",
 		".toml": "TOML",
 	}
-	
+
 	// Count languages
 	langCount := make(map[string]int)
 	for ext, count := range fileInfo {
@@ -139,13 +139,13 @@ func (sc *SimpleContext) GetLanguageInfo() ([]string, error) {
 			langCount[lang] += count
 		}
 	}
-	
+
 	// Convert to sorted slice
 	var languages []string
 	for lang := range langCount {
 		languages = append(languages, lang)
 	}
-	
+
 	return languages, nil
 }
 
@@ -155,12 +155,12 @@ func (sc *SimpleContext) SaveSummary(summary *RepoSummary) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal summary: %w", err)
 	}
-	
+
 	err = os.WriteFile(sc.CachePath, data, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write summary file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -170,13 +170,13 @@ func (sc *SimpleContext) LoadSummary() (*RepoSummary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read summary file: %w", err)
 	}
-	
+
 	var summary RepoSummary
 	err = json.Unmarshal(data, &summary)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal summary: %w", err)
 	}
-	
+
 	return &summary, nil
 }
 
@@ -193,13 +193,13 @@ func (sc *SimpleContext) GetRepoSummary() string {
 		debug.Log("Failed to load repository summary: %v", err)
 		return ""
 	}
-	
+
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("Repository: %s\n", summary.Name))
 	result.WriteString(fmt.Sprintf("Description: %s\n", summary.Description))
 	result.WriteString(fmt.Sprintf("Files: %d\n", summary.Files))
 	result.WriteString(fmt.Sprintf("Directories: %d\n", summary.Directories))
 	result.WriteString(fmt.Sprintf("Languages: %s\n", strings.Join(summary.Languages, ", ")))
-	
+
 	return result.String()
 }
