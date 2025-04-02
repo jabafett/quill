@@ -73,7 +73,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create generate factory: %w", err)
 	}
 
-
 	// Generate messages
 	msgs, err := generator.Generate(context.Background())
 	if err != nil {

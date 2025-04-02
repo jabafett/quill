@@ -6,6 +6,11 @@ import (
 	"sync"
 
 	"github.com/jabafett/quill/internal/factories"
+	"github.com/dgraph-io/badger/v4"
+	"github.com/jabafett/quill/internal/factories"
+
+	c "github.com/jabafett/quill/internal/utils/context"
+
 	"github.com/jabafett/quill/internal/utils/ai"
 	"github.com/jabafett/quill/internal/utils/config"
 	"github.com/jabafett/quill/internal/utils/debug"
@@ -88,25 +93,41 @@ func NewGenerateFactory(opts factories.ProviderOptions) (*GenerateFactory, error
 
 	debug.Log("Finished creating provider")
 
-	// Initialize context provider
+	// Initialize context engine
 	repoRootPath, err := repo.GetRepoRootPath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repo root path: %w", err)
 	}
 
-	contextProvider, err := factories.NewContextProvider(
+	contextEngine, err := factories.NewContextEngine(
+		factories.WithBasePath(repoRootPath),
 		factories.WithRepoRootPath(repoRootPath),
 	)
 	if err != nil {
-		debug.Log("Warning: Failed to create context provider: %v. Proceeding without repository context.", err)
+		debug.Log("Warning: Failed to create context engine: %v. Proceeding without repository context.", err)
 	}
 
 	factory := &GenerateFactory{
-		config:          cfg,
-		repo:            repo,
-		templates:       templates,
-		provider:        provider,
-		contextProvider: contextProvider,
+		config:        cfg,
+		repo:          repo,
+		templates:     templates,
+		provider:      provider,
+		contextEngine: contextEngine,
+	}
+
+	// Attempt to load cached context
+	if factory.contextEngine != nil {
+		var loadedCtx c.RepositoryContext
+		repoCacheKey := fmt.Sprintf("repo_context:%s", repoRootPath)
+		err := factory.contextEngine.GetCachedContext(repoCacheKey, &loadedCtx)
+		if err == nil {
+			debug.Log("Successfully loaded cached repository context for generate command.")
+			factory.repoCtx = &loadedCtx
+		} else if err == badger.ErrKeyNotFound {
+			debug.Log("No cached repository context found (key: %s). Run 'quill index' first for context-aware generation.", repoCacheKey)
+		} else {
+			debug.Log("Warning: Error loading cached repository context: %v", err)
+		}
 	}
 
 	return factory, nil
@@ -137,19 +158,29 @@ func (f *GenerateFactory) Generate(ctx context.Context) ([]string, error) {
 	debug.Log("Diff stats - Added: %d, Deleted: %d, Files: %d", added, deleted, len(files))
 
 	// Prepare template data
-	data := map[string]any{
-		"Diff":            diff,
-		"Files":           files,
-		"RepoDescription": "", // Default to empty string
+	data := map[string]interface{}{
+		"Diff":           diff,
+		"AddedLines":     added,
+		"DeletedLines":   deleted,
+		"Files":          files,
+		"RelatedContext": "", // Default to empty string
 	}
 
-	// Add repository summary if available
-	if f.contextProvider != nil && f.contextProvider.HasSummary() {
-		repoSummary := f.contextProvider.GetRepoSummary()
-		data["RepoDescription"] = repoSummary
-		debug.Log("Added repository summary to prompt data")
+	// If graph exists, extract context based on changed files
+	if f.depGraph != nil && len(files) > 0 {
+		debug.Log("Extracting related context from graph for changed files: %v", files)
+		// Use a reasonable depth, e.g., 1 or 2
+		contextString, err := f.depGraph.GetContextForFiles(files, 2)
+		if err != nil {
+			debug.Log("Warning: Failed to get context from graph: %v", err)
+		} else {
+			data["RelatedContext"] = contextString
+			debug.Log("Added related context to prompt data\nContext: %s", contextString)
+		}
+	} else if f.repoCtx != nil && f.depGraph == nil {
+		debug.Log("Repository context loaded, but dependency graph failed to build or is nil")
 	} else {
-		debug.Log("No repository summary available. Run 'quill index' first for context-aware generation.")
+		debug.Log("No dependency graph available for context extraction")
 	}
 
 	// Generate prompt from template
@@ -165,6 +196,5 @@ func (f *GenerateFactory) Generate(ctx context.Context) ([]string, error) {
 	if temp := f.config.Providers[f.config.Core.DefaultProvider].Temperature; temp > 0 {
 		opts.Temperature = &temp
 	}
-	debug.Log("Sending prompt to AI provider: %s", prompt)
 	return f.provider.Generate(ctx, prompt, opts)
 }

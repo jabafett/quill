@@ -5,6 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	types "github.com/jabafett/quill/internal/utils/context"
 
 	"github.com/jabafett/quill/internal/utils/ai"
 )
@@ -26,4 +31,17 @@ func (m *MockGeminiProvider) Generate(ctx context.Context, prompt string, opts a
 func EnsureParentDir(filePath string) error {
 	dir := filepath.Dir(filePath)
 	return os.MkdirAll(dir, 0755)
+}
+
+// mocks.AssertSymbol checks if a symbol with the given name and type exists in the symbols list
+func AssertSymbol(t *testing.T, symbols []types.SymbolContext, name string, symbolType string) {
+	t.Helper()
+	found := false
+	for _, sym := range symbols {
+		if sym.Name == name && sym.Type == symbolType {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Symbol %q of type %q not found", name, symbolType)
 }
