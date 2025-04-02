@@ -14,7 +14,6 @@ require (
 	github.com/sashabaranov/go-openai v1.35.6
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.20.0-alpha.6
-	github.com/stretchr/testify v1.10.0
 	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/time v0.8.0
 	google.golang.org/api v0.155.0
@@ -84,6 +83,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
