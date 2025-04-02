@@ -1,59 +1,69 @@
 package cmd
 
 import (
-	"context" // Add context import
-	"fmt"
+        "context"
+        "fmt"
 
-	"github.com/jabafett/quill/internal/providers"
-	"github.com/jabafett/quill/internal/utils/debug"
-	"github.com/spf13/cobra"
+        "github.com/jabafett/quill/internal/providers"
+        "github.com/jabafett/quill/internal/utils/debug"
+        "github.com/spf13/cobra"
 )
 
 var indexCmd = &cobra.Command{
-	Use:   "index",
-	Short: "Index repository context",
-	Long: `Analyzes the repository files to build a context index.
+        Use:   "index",
+        Short: "Generate repository summary",
+        Long: `Analyzes the repository and generates an AI-powered summary.
 
-This command scans the files in your git repository, analyzes their structure
-and content (respecting .gitignore), and stores an aggregated context representation
-in the cache. This index is used by other commands like 'generate' and 'suggest'
-to provide more context-aware results.
+This command examines your git repository structure, files, and languages
+to create a concise summary of the repository. This summary is used by
+the 'generate' command to provide more context-aware commit messages.
 
-By default, indexing is incremental and only analyzes changed files. Use the --force
-flag to re-analyze all files.`,
-	RunE: runIndex,
+By default, the summary is generated once and cached. Use the --force
+flag to regenerate the summary.`,
+        RunE: runIndex,
 }
 
 func init() {
-	indexCmd.Flags().Bool("force", false, "Force re-indexing of all files, ignoring cache")
-	rootCmd.AddCommand(indexCmd) // Add indexCmd to rootCmd
+        indexCmd.Flags().Bool("force", false, "Force regeneration of repository summary")
+        rootCmd.AddCommand(indexCmd)
 }
 
 func runIndex(cmd *cobra.Command, args []string) error {
-	debug.Log("Starting index command")
+        debug.Log("Starting index command")
 
-	forceReindex, _ := cmd.Flags().GetBool("force")
-	debug.Log("Force re-index: %v", forceReindex)
+        forceReindex, _ := cmd.Flags().GetBool("force")
+        debug.Log("Force regeneration: %v", forceReindex)
 
-	fmt.Println("Initializing index provider...") // Simple feedback
+        fmt.Println("Initializing index provider...")
 
-	// Instantiate IndexProvider
-	indexProvider, err := providers.NewIndexProvider()
-	if err != nil {
-		return fmt.Errorf("failed to create index provider: %w", err)
-	}
+        // Instantiate IndexProvider
+        indexProvider, err := providers.NewIndexProvider()
+        if err != nil {
+                return fmt.Errorf("failed to create index provider: %w", err)
+        }
 
-	fmt.Println("Starting repository indexing...") // Simple feedback
+        // Check if summary already exists
+        if !forceReindex && indexProvider.HasSummary() {
+                fmt.Println("Repository summary already exists. Use --force to regenerate.")
+                return nil
+        }
 
-	// Call IndexRepository
-	err = indexProvider.IndexRepository(context.Background(), forceReindex)
-	if err != nil {
-		// Consider more specific error handling or logging here
-		return fmt.Errorf("failed to index repository: %w", err)
-	}
+        fmt.Println("Analyzing repository and generating summary...")
 
-	fmt.Println("Repository indexing completed successfully.") // Simple feedback
+        // Generate repository summary
+        err = indexProvider.IndexRepository(context.Background(), forceReindex)
+        if err != nil {
+                return fmt.Errorf("failed to generate repository summary: %w", err)
+        }
 
+        fmt.Println("Repository summary generated successfully.")
+        
+        // Display the summary
+        if indexProvider.HasSummary() {
+                fmt.Println("\nRepository Summary:")
+                fmt.Println("-------------------")
+                fmt.Println(indexProvider.GetRepoSummary())
+        }
 
-	return nil
+        return nil
 }
