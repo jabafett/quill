@@ -1,339 +1,240 @@
 package providers
 
 import (
-	c "context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
+        c "context"
+        "fmt"
+        "os/exec"
+        "sync"
+        "time"
 
-	"github.com/dgraph-io/badger/v4"
-	"github.com/jabafett/quill/internal/factories"
-	"github.com/jabafett/quill/internal/utils/config"
-	"github.com/jabafett/quill/internal/utils/context"
-	"github.com/jabafett/quill/internal/utils/debug"
-	"github.com/jabafett/quill/internal/utils/git"
+        "github.com/jabafett/quill/internal/factories"
+        "github.com/jabafett/quill/internal/utils/ai"
+        "github.com/jabafett/quill/internal/utils/config"
+        "github.com/jabafett/quill/internal/utils/context"
+        "github.com/jabafett/quill/internal/utils/debug"
+        "github.com/jabafett/quill/internal/utils/git"
 )
 
 // IndexProvider handles the repository indexing process
 type IndexProvider struct {
-	config        *config.Config
-	repo          *git.Repository
-	contextEngine *factories.ContextEngine
-	repoRootPath  string
+        config         *config.Config
+        repo           *git.Repository
+        contextProvider *factories.ContextProvider
+        repoRootPath   string
+        aiProvider     factories.Provider
 }
 
 type IndexProviderOptions struct {
-	RepoRootPath string
-	CachePath    string
-	BasePath     string
+        RepoRootPath string
 }
 
 // NewIndexProvider creates a new provider for the index command
 func NewIndexProvider(opts ...func(*IndexProviderOptions)) (*IndexProvider, error) {
-	var (
-		cfg           *config.Config
-		repo          *git.Repository
-		contextEngine *factories.ContextEngine
-		repoRootPath  string
-		errChan       = make(chan error, 4) // Increased buffer for potential repoRootPath error
-		wg            sync.WaitGroup
-	)
+        var (
+                cfg            *config.Config
+                repo           *git.Repository
+                contextProvider *factories.ContextProvider
+                repoRootPath   string
+                errChan        = make(chan error, 3)
+                wg             sync.WaitGroup
+        )
 
-	// Default options
-	options := IndexProviderOptions{
-		RepoRootPath: "",
-		BasePath:     "",
-		CachePath:    "",
-	}
+        // Default options
+        options := IndexProviderOptions{
+                RepoRootPath: "",
+        }
 
-	// Apply option overrides
-	for _, opt := range opts {
-		opt(&options)
-	}
+        // Apply option overrides
+        for _, opt := range opts {
+                opt(&options)
+        }
 
-	debug.Dump("options", options)
+        debug.Log("Starting index provider initialization")
 
-	debug.Log("Starting index provider initialization")
+        // Load components concurrently
+        wg.Add(2)
 
-	// Load components concurrently
-	wg.Add(2)
+        // Load configuration
+        go func() {
+                defer wg.Done()
+                var err error
+                cfg, err = config.LoadConfig()
+                if err != nil {
+                        errChan <- fmt.Errorf("failed to load config: %w", err)
+                        return
+                }
+                debug.Log("Finished loading configuration")
+        }()
 
-	// Load configuration
-	go func() {
-		defer wg.Done()
-		var err error
-		cfg, err = config.LoadConfig()
-		if err != nil {
-			errChan <- fmt.Errorf("failed to load config: %w", err)
-			return
-		}
-		debug.Log("Finished loading configuration")
-	}()
+        // Initialize git object and get root path
+        go func() {
+                defer wg.Done()
+                var err error
+                repo, err = git.NewRepository(options.RepoRootPath)
+                if err != nil {
+                        errChan <- fmt.Errorf("failed to initialize git repository: %w", err)
+                        return
+                }
+                // Get repo root path after repo is initialized
+                repoRootPath, err = repo.GetRepoRootPath()
+                if err != nil {
+                        errChan <- fmt.Errorf("failed to get repo root path: %w", err)
+                        return
+                }
+        }()
 
-	// Initialize git object and get root path
-	go func() {
-		defer wg.Done()
-		var err error
-		repo, err = git.NewRepository(options.RepoRootPath)
-		if err != nil {
-			errChan <- fmt.Errorf("failed to initialize git repository: %w", err)
-			return
-		}
-		// Get repo root path after repo is initialized
-		repoRootPath, err = repo.GetRepoRootPath()
-		if err != nil {
-			errChan <- fmt.Errorf("failed to get repo root path: %w", err)
-			return
-		}
-	}()
+        // Wait for concurrent tasks
+        wg.Wait()
+        close(errChan)
 
-	// Wait for concurrent tasks
-	wg.Wait()
-	close(errChan)
+        // Check for any errors during initialization
+        for err := range errChan {
+                return nil, err
+        }
 
-	// Check for any errors during initialization
-	for err := range errChan {
-		return nil, err
-	}
+        // Create context provider
+        var err error
+        contextProvider, err = factories.NewContextProvider(
+                factories.WithRepoRootPath(repoRootPath),
+        )
+        if err != nil {
+                return nil, fmt.Errorf("failed to create context provider: %w", err)
+        }
+        debug.Log("Finished initializing context provider")
 
-	var err error
-	contextEngine, err = factories.NewContextEngine(
-		factories.WithCachePath(options.CachePath), // Assuming GetPath() exists or is added
-		factories.WithBasePath(repoRootPath),       // Use repo root as base path
-		factories.WithRepoRootPath(repoRootPath),   // Pass repo root for cache key namespacing
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create context engine: %w", err)
-	}
-	debug.Log("Finished initializing context engine")
+        // Create AI provider
+        aiProvider, err := factories.NewProvider(cfg, factories.ProviderOptions{
+                Provider: cfg.Core.DefaultProvider,
+        })
+        if err != nil {
+                return nil, fmt.Errorf("failed to create AI provider: %w", err)
+        }
 
-	return &IndexProvider{
-		config:        cfg,
-		repo:          repo,
-		contextEngine: contextEngine,
-		repoRootPath:  repoRootPath,
-	}, nil
+        return &IndexProvider{
+                config:         cfg,
+                repo:           repo,
+                contextProvider: contextProvider,
+                repoRootPath:   repoRootPath,
+                aiProvider:     aiProvider,
+        }, nil
 }
 
-// IndexRepository analyzes the repository and updates the cached context
+// IndexRepository generates a summary of the repository using AI
 func (p *IndexProvider) IndexRepository(ctx c.Context, forceReindex bool) error {
-	debug.Log("Starting repository indexing for: %s", p.repoRootPath)
-	startTime := time.Now()
+        debug.Log("Starting repository indexing for: %s", p.repoRootPath)
+        startTime := time.Now()
 
-	// 1. Retrieve Previous Context
-	var previousContext context.RepositoryContext
-	repoCacheKey := fmt.Sprintf("repo_context:%s", p.repoRootPath)
-	err := p.contextEngine.GetCachedContext(repoCacheKey, &previousContext)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			debug.Log("No previous repository context found in cache for key: %s", repoCacheKey)
-			// Initialize empty context if not found
-			previousContext = context.RepositoryContext{
-				Files: make(map[string]*context.FileContext),
-			}
-		} else {
-			return fmt.Errorf("failed to get previous repository context from cache: %w", err)
-		}
-	} else {
-		debug.Log("Loaded previous repository context from cache (key: %s)", repoCacheKey)
-	}
+        // Skip if summary exists and not forcing reindex
+        if !forceReindex && p.contextProvider.HasSummary() {
+                debug.Log("Repository summary already exists. Use --force to regenerate.")
+                return nil
+        }
 
-	// 2. List Files
-	trackedFiles := p.repo.GetNonIgnoredFiles()
-	debug.Log("Found %d tracked files", len(trackedFiles))
+        // Get repository information
+        repoName, err := p.repo.GetRepoName()
+        if err != nil {
+                return fmt.Errorf("failed to get repository name: %w", err)
+        }
 
-	// 3. Determine Files to Analyze
-	filesToAnalyze := make([]string, 0)
-	skippedFiles := make(map[string]*context.FileContext) // Store context of skipped files
+        // Get directory tree
+        dirTree, err := p.contextProvider.GetDirectoryTree(3) // Limit to 3 levels deep
+        if err != nil {
+                return fmt.Errorf("failed to get directory tree: %w", err)
+        }
 
-	for _, fileRelPath := range trackedFiles {
-		// Construct absolute path for os.Stat
-		fileAbsPath := filepath.Join(p.repoRootPath, fileRelPath)
+        // Get file info
+        fileInfo, err := p.contextProvider.GetFileInfo()
+        if err != nil {
+                return fmt.Errorf("failed to get file info: %w", err)
+        }
 
-		// Check if we should force analysis
-		if forceReindex {
-			filesToAnalyze = append(filesToAnalyze, fileRelPath)
-			continue
-		}
+        // Count files
+        fileCount := 0
+        for _, count := range fileInfo {
+                fileCount += count
+        }
 
-		// Get file modification time
-		fileInfo, err := os.Stat(fileAbsPath)
-		if err != nil {
-			// Log error but continue; maybe the file was deleted?
-			debug.Log("Warning: Failed to stat file %s: %v", fileAbsPath, err)
-			// If file doesn't exist, we don't need to analyze it, but also remove from previous context if present
-			delete(previousContext.Files, fileRelPath)
-			continue
-		}
-		modTime := fileInfo.ModTime()
+        // Get language info
+        languages, err := p.contextProvider.GetLanguageInfo()
+        if err != nil {
+                return fmt.Errorf("failed to get language info: %w", err)
+        }
 
-		// Check against previous context
-		if cachedFileCtx, exists := previousContext.Files[fileRelPath]; exists {
-			// Compare file system mod time with cached mod time directly.
-			// If the filesystem timestamp hasn't changed, we skip.
-			if modTime.Equal(cachedFileCtx.ModTime) {
-				// File hasn't changed, skip analysis and keep cached context
-				skippedFiles[fileRelPath] = cachedFileCtx
-				// debug.Log("Skipping unchanged file: %s (FS: %s, Cache: %s)", fileRelPath, modTime, cachedFileCtx.ModTime) // Can be noisy
-				continue
-			}
-			debug.Log("File changed, needs re-analysis: %s (FS: %s, Cache: %s)", fileRelPath, modTime, cachedFileCtx.ModTime)
-		} else {
-			debug.Log("New file detected, needs analysis: %s", fileRelPath)
-		}
+        // Get README content if available
+        readmeCmd := exec.Command("find", p.repoRootPath, "-name", "README.md", "-o", "-name", "README", "-o", "-name", "readme.md")
+        readmePaths, err := readmeCmd.Output()
+        var readmeContent string
+        if err == nil && len(readmePaths) > 0 {
+                catCmd := exec.Command("cat", string(readmePaths))
+                readmeBytes, err := catCmd.Output()
+                if err == nil {
+                        readmeContent = string(readmeBytes)
+                }
+        }
 
-		// If not skipped, add to analysis list
-		filesToAnalyze = append(filesToAnalyze, fileRelPath)
-	}
+        // Generate repository description using AI
+        prompt := fmt.Sprintf(`Generate a concise summary of this repository:
 
-	debug.Log("Files to analyze: %d, Skipped files: %d", len(filesToAnalyze), len(skippedFiles))
+Repository Name: %s
+File Count: %d
+Languages: %v
 
-	// 4. Analyze Files
-	var analyzedContext *context.RepositoryContext
-	if len(filesToAnalyze) > 0 {
-		debug.Log("Analyzing %d files... (forceReindex: %v)", len(filesToAnalyze), forceReindex)
-		var analysisErr error
-		// Pass forceReindex flag to ExtractContext
-		analyzedContext, analysisErr = p.contextEngine.ExtractContext(filesToAnalyze, forceReindex)
-		if analysisErr != nil {
-			// Log error but potentially continue to save partial context?
-			// For now, let's return the error.
-			return fmt.Errorf("error during file analysis: %w", analysisErr)
-		}
-		debug.Log("Analysis complete. Analyzed context has %d files.", len(analyzedContext.Files))
-		// TODO: Handle analyzedContext.Errors if needed
-	} else {
-		debug.Log("No files needed analysis.")
-		// Initialize empty if nothing was analyzed
-		analyzedContext = &context.RepositoryContext{
-			Files: make(map[string]*context.FileContext),
-		}
-	}
+Directory Structure:
+%s
 
-	// 5. Merge Contexts
-	finalContext := context.RepositoryContext{
-		Name:          previousContext.Name, // Preserve previous metadata for now
-		Description:   previousContext.Description,
-		RepositoryURL: previousContext.RepositoryURL,
-		Visibility:    previousContext.Visibility,
-		Files:         make(map[string]*context.FileContext),
-		// Metrics and Languages will be overwritten by the latest analysis run's aggregate
-		Metrics:   analyzedContext.Metrics,
-		Languages: analyzedContext.Languages,
-		// Preserve previous errors? Or only show new ones? Let's keep new ones for now.
-		Errors: analyzedContext.Errors,
-		// Dependencies will be recalculated based on merged files
-	}
+%s
 
-	// Add newly analyzed files
-	for path, fileCtx := range analyzedContext.Files {
-		finalContext.Files[path] = fileCtx
-	}
+The summary should be 3-5 sentences describing what this repository is for, its main components, and its purpose.
+Focus on the technical aspects and be specific about what the code does based on the directory structure and languages used.
+`, repoName, fileCount, languages, dirTree, readmeContent)
 
-	// Add skipped files (from cache)
-	for path, fileCtx := range skippedFiles {
-		finalContext.Files[path] = fileCtx
-	}
+        // Generate summary using AI
+        debug.Log("Generating repository summary using AI...")
+        summary, err := p.aiProvider.Generate(ctx, prompt, ai.GenerateOptions{
+                MaxCandidates: 1,
+        })
+        if err != nil {
+                return fmt.Errorf("failed to generate repository summary: %w", err)
+        }
 
-	// Recalculate overall dependencies from the final merged file set
-	importSet := context.NewImportSet()
-	for _, fileCtx := range finalContext.Files {
-		if fileCtx != nil {
-			for _, imp := range fileCtx.Imports {
-				importSet.Add(imp)
-			}
-		}
-	}
-	finalContext.Dependencies = make([]context.Dependency, 0, len(importSet.Imports()))
-	for _, depName := range importSet.Dependencies() {
-		finalContext.Dependencies = append(finalContext.Dependencies, context.Dependency{Name: depName})
-	}
+        if len(summary) == 0 {
+                return fmt.Errorf("AI provider returned empty summary")
+        }
 
-	// TODO: 6. Add/Update Repository Metadata (missing some fields from RepositoryContext)
-	finalContext.Name, err = p.repo.GetRepoName()
-	if err != nil {
-		return fmt.Errorf("failed to get repository name: %w", err)
-	}
-	finalContext.VersionControl.Branch, err = p.repo.GetCurrentBranch()
-	if err != nil {
-		return fmt.Errorf("failed to get current branch: %w", err)
-	}
+        // Create repository summary
+        repoSummary := &context.RepoSummary{
+                Name:        repoName,
+                Description: summary[0],
+                Files:       fileCount,
+                Directories: len(dirTree),
+                Languages:   languages,
+                CreatedAt:   time.Now(),
+                UpdatedAt:   time.Now(),
+        }
 
-	// 7. Update Metrics/Languages (already done by taking from analyzedContext)
-	// Note: This assumes ContextEngine correctly aggregates metrics for the analyzed subset.
-	// If we skipped all files, we should probably retain previous metrics/languages.
-	if len(filesToAnalyze) == 0 {
-		finalContext.Metrics = previousContext.Metrics
-		finalContext.Languages = previousContext.Languages
-	} else {
-		// If some files were analyzed, update total counts based on the final merged set
-		finalContext.Metrics.TotalFiles = len(finalContext.Files)
-		// Recalculating total lines would require reading skipped files, skip for now.
-		// finalContext.Metrics.TotalLines = calculateTotalLines(finalContext.Files)
-	}
+        // Save summary
+        err = p.contextProvider.SaveSummary(repoSummary)
+        if err != nil {
+                return fmt.Errorf("failed to save repository summary: %w", err)
+        }
 
-	// 8. Persist Context
-	debug.Log("Persisting final repository context to cache (key: %s)", repoCacheKey)
-	err = p.contextEngine.SetCachedContext(repoCacheKey, finalContext)
-	if err != nil {
-		return fmt.Errorf("failed to persist final repository context to cache: %w", err)
-	}
-
-	debug.Dump("Final context", finalContext)
-
-	// Build context graph
-	err = p.BuildContextGraph(&finalContext)
-	if err != nil {
-		return fmt.Errorf("failed to build context graph: %w", err)
-	}
-
-	debug.Log("Repository indexing finished successfully in %s", time.Since(startTime))
-	return nil
+        debug.Log("Repository indexing finished successfully in %s", time.Since(startTime))
+        return nil
 }
 
-// BuildContextGraph builds the context graph from the repository context
-func (p *IndexProvider) BuildContextGraph(finalContext *context.RepositoryContext) error {
-	graph, err := context.BuildDependencyGraph(finalContext)
-	if err != nil {
-		return fmt.Errorf("failed to build context graph: %w", err)
-	}
-	repoGraphKey := fmt.Sprintf("context_graph:%s", p.repoRootPath)
-	err = p.contextEngine.SetCachedContext(repoGraphKey, graph)
-	if err != nil {
-		return fmt.Errorf("failed to persist context graph to cache: %w", err)
-	}
-	return nil
+// GetRepoSummary returns the repository summary
+func (p *IndexProvider) GetRepoSummary() string {
+        return p.contextProvider.GetRepoSummary()
 }
 
-// GetCachedContext retrieves a cached value if valid and deserializes it into the provided type
-func (p *IndexProvider) GetCachedContext(key string, value interface{}) error {
-	return p.contextEngine.GetCachedContext(key, value)
+// HasSummary checks if a repository summary exists
+func (p *IndexProvider) HasSummary() bool {
+        return p.contextProvider.HasSummary()
 }
 
-// SetCachedContext caches a value
-func (p *IndexProvider) SetCachedContext(key string, value interface{}) error {
-	return p.contextEngine.SetCachedContext(key, value)
-}
-
-// Exposed for test
+// WithRepoRootPath sets the repository root path
 func WithRepoRootPath(path string) func(*IndexProviderOptions) {
-	return func(opts *IndexProviderOptions) {
-		opts.RepoRootPath = path
-	}
-}
-
-// Exposed for test
-func WithCachePath(path string) func(*IndexProviderOptions) {
-	return func(opts *IndexProviderOptions) {
-		opts.CachePath = path
-	}
-}
-
-// Exposed for test
-func WithBasePath(path string) func(*IndexProviderOptions) {
-	return func(opts *IndexProviderOptions) {
-		opts.BasePath = path
-	}
+        return func(opts *IndexProviderOptions) {
+                opts.RepoRootPath = path
+        }
 }
