@@ -3,6 +3,7 @@ package context
 import (
 	"bytes"
 	"path/filepath"
+	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -18,9 +19,11 @@ func (d *FileTypeDetector) DetectFileType(path string, content []byte) string {
 	case ".go":
 		return "go"
 	case ".js", ".jsx":
-		return "javascript" 
-	case ".ts", ".tsx":
+		return "javascript"
+	case ".ts":
 		return "typescript"
+	case ".tsx":
+		return "tsx"
 	case ".py":
 		return "python"
 	case ".java":
@@ -32,10 +35,10 @@ func (d *FileTypeDetector) DetectFileType(path string, content []byte) string {
 	case ".rs":
 		return "rust"
 	case ".c", ".cpp", ".h", ".hpp":
-		return "c++"
+		return "cpp"
 	case ".md", ".markdown":
 		return "markdown"
-	case ".yaml", ".yml": 
+	case ".yaml", ".yml":
 		return "yaml"
 	case ".json":
 		return "json"
@@ -45,9 +48,41 @@ func (d *FileTypeDetector) DetectFileType(path string, content []byte) string {
 		return "sql"
 	}
 
+	// Try to detect by content patterns if no extension match
+	// python shebang
+	if bytes.Contains(content, []byte("#!/usr/bin/env python")) {
+		return "python"
+	}
+	// go shebang
+	if bytes.Contains(content, []byte("#!/usr/bin/env go")) {
+		return "go"
+	}
+	// rust shebang
+	if bytes.Contains(content, []byte("#!/usr/bin/env rust")) {
+		return "rust"
+	}
+	// cpp shebang
+	if bytes.Contains(content, []byte("#!/usr/bin/env cpp")) {
+		return "cpp"
+	}
+	if bytes.Contains(content, []byte("fn ")) || bytes.Contains(content, []byte("use std::")) {
+		return "rust"
+	}
+	if bytes.Contains(content, []byte("#include")) || bytes.Contains(content, []byte("namespace ")) {
+		return "cpp"
+	}
+	if bytes.Contains(content, []byte("public class")) || bytes.Contains(content, []byte("package ")) {
+		return "java"
+	}
+	if bytes.Contains(content, []byte("impl ")) {
+		return "rust"
+	}
+	if bytes.Contains(content, []byte("class ")) || bytes.Contains(content, []byte("template<")) {
+		return "cpp"
+	}
+
 	// Fallback to mime type detection
 	mtype := mimetype.Detect(content)
-	// Map mime types to our internal type system
 	switch mtype.String() {
 	case "application/x-golang":
 		return "go"
@@ -66,19 +101,8 @@ func (d *FileTypeDetector) DetectFileType(path string, content []byte) string {
 	case "text/x-rust":
 		return "rust"
 	case "text/x-c", "text/x-c++":
-		return "c++"
-	}
-	// Try to detect by content patterns
-	if bytes.Contains(content, []byte("<?php")) {
-		return "php"
-	}
-	if bytes.Contains(content, []byte("#!/usr/bin/env python")) {
-		return "python"
-	}
-	if bytes.Contains(content, []byte("package ")) && bytes.Contains(content, []byte("import ")) {
-		return "go"
+		return "cpp"
 	}
 
-	// If all else fails, return the mime type
-	return mtype.String()
+	return strings.Split(mtype.String(), ";")[0]
 }

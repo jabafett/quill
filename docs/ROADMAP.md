@@ -33,26 +33,24 @@
 - [x] Import/dependency mapping
 - [x] Cross-reference tracking
 - [x] File complexity analysis
-- [ ] Historical change pattern analysis (postponed)
-- [ ] Contributor tracking (postponed)
-- [ ] Semantic relationship mapping (postponed)
 
 ### Context Management (In Progress)
 - [x] File-level context caching with TTL
 - [x] Badger-based persistent storage
 - [x] Concurrent context processing
 - [x] Memory-efficient resource pooling
-- [ ] Progressive context learning (postponed)
-- [ ] Repository-wide context storage (close)
+- [ ] Repository-wide context storage *(in progress)*
 
 ### Smart Suggestion
-- [ ] Context-aware commit messages when indexed
+- [ ] Context-aware commit messages when indexed *(next to be implemented)*
 - [ ] Context-aware commit groupings with continuous indexing
+- [ ] Interactive staging suggestions
 - [ ] Change impact analysis
 - [ ] Breaking change detection
 - [ ] Semantic versioning impact
 - [ ] Branch-aware suggestions
 - [ ] Suggested reviewers
+- [ ] Progressive context learning
 
 ## 🔄 Phase 4: Advanced Features
 
@@ -62,7 +60,7 @@
 - [ ] Issue/PR reference detection
 - [ ] Branch strategy recommendations
 - [ ] Commit signing support
-- [ ] Interactive staging suggestions
+- [ ] Contributor tracking (postponed)
 
 ### Performance Optimization
 - [ ] Request deduplication

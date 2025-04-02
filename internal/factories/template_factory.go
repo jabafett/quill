@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+
 	"github.com/jabafett/quill/internal/utils/templates"
 )
 
 // Additional template types
 const (
 	ContextExtractionType TemplateType = "ContextExtraction"
-	AnalysisType         TemplateType = "Analysis"
-	SuggestionType       TemplateType = "Suggestion"
+	AnalysisType          TemplateType = "Analysis"
+	SuggestionType        TemplateType = "Suggestion"
 )
 
 // Additional template data types
@@ -25,10 +26,10 @@ type (
 
 	// AnalysisData holds data for analysis templates
 	AnalysisData struct {
-		Context     string
-		Changes     string
-		FileTypes   map[string]string
-		Complexity  int
+		Context    string
+		Changes    string
+		FileTypes  map[string]string
+		Complexity int
 	}
 
 	// SuggestionData holds data for suggestion templates
@@ -80,7 +81,7 @@ func (f *TemplateFactory) initializeTemplates() error {
 	templateMap := map[TemplateType]string{
 		CommitMessageType:     templates.CommitMessageTemplate,
 		ContextExtractionType: templates.ContextExtractionTemplate,
-		SuggestionType:       templates.SuggestTemplate,
+		SuggestionType:        templates.SuggestTemplate,
 	}
 
 	for typ, content := range templateMap {
@@ -97,8 +98,8 @@ func (f *TemplateFactory) initializeTemplates() error {
 func ValidateTemplates() error {
 	templates := map[string]string{
 		"ContextExtraction": templates.ContextExtractionTemplate,
-		"CommitMessage":    templates.CommitMessageTemplate,
-		"Suggest":          templates.SuggestTemplate,
+		"CommitMessage":     templates.CommitMessageTemplate,
+		"Suggest":           templates.SuggestTemplate,
 	}
 
 	for name, content := range templates {
@@ -124,7 +125,6 @@ func (f *TemplateFactory) Generate(typ TemplateType, data interface{}) (string, 
 
 	return buf.String(), nil
 }
-
 
 // GenerateContext creates a context extraction prompt
 func (f *TemplateFactory) GenerateContext(data ContextData) (string, error) {
@@ -154,4 +154,4 @@ func (f *TemplateFactory) generateFromType(typ TemplateType, data interface{}) (
 	}
 
 	return buf.String(), nil
-} 
+}

@@ -51,7 +51,7 @@ func TestGitOperations(t *testing.T) {
 	}
 
 	// Test git operations
-	repo, err := git.NewRepository()
+	repo, err := git.NewRepository(".")
 	if err != nil {
 		t.Fatalf("Failed to create repository: %v", err)
 	}

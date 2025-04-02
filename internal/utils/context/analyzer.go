@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jabafett/quill/internal/utils/debug"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/cpp"
 	"github.com/smacker/go-tree-sitter/css"
@@ -19,6 +20,8 @@ import (
 	"github.com/smacker/go-tree-sitter/python"
 	"github.com/smacker/go-tree-sitter/ruby"
 	"github.com/smacker/go-tree-sitter/rust"
+	"github.com/smacker/go-tree-sitter/typescript/tsx"
+	"github.com/smacker/go-tree-sitter/typescript/typescript"
 )
 
 // Analyzer interface for language-specific analyzers
@@ -35,6 +38,11 @@ type DefaultAnalyzer struct {
 	cursorPool   *sync.Pool
 	parserPool   *sync.Pool
 	mu           sync.RWMutex
+
+	// Track language statistics
+	languageStats map[string]int
+	totalFiles    int
+	totalLines    int
 }
 
 // NewDefaultAnalyzer creates a new analyzer with initialized parsers
@@ -54,17 +62,19 @@ func NewDefaultAnalyzer() *DefaultAnalyzer {
 				return sitter.NewParser()
 			},
 		},
+		languageStats: make(map[string]int),
 	}
-
 	a.registerLanguages()
 	return a
 }
 
+// registerLanguages registers supported languages
 func (a *DefaultAnalyzer) registerLanguages() {
 	a.langLoaders = map[string]func() *sitter.Language{
 		"go":         golang.GetLanguage,
 		"javascript": javascript.GetLanguage,
-		"typescript": javascript.GetLanguage,
+		"typescript": typescript.GetLanguage,
+		"tsx":        tsx.GetLanguage,
 		"python":     python.GetLanguage,
 		"cpp":        cpp.GetLanguage,
 		"c++":        cpp.GetLanguage,
@@ -77,6 +87,7 @@ func (a *DefaultAnalyzer) registerLanguages() {
 	}
 }
 
+// getLanguage returns the language for the given file type
 func (a *DefaultAnalyzer) getLanguage(fileType string) (*sitter.Language, error) {
 	// First try read-only access
 	a.mu.RLock()
@@ -106,7 +117,15 @@ func (a *DefaultAnalyzer) getLanguage(fileType string) (*sitter.Language, error)
 	return lang, nil
 }
 
+// Analyzes a single file
 func (a *DefaultAnalyzer) Analyze(ctx context.Context, path string) (*FileContext, error) {
+	// Get file info first to capture mod time
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat file: %w", err)
+	}
+	modTime := fileInfo.ModTime()
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -118,399 +137,267 @@ func (a *DefaultAnalyzer) Analyze(ctx context.Context, path string) (*FileContex
 
 	fileType := a.typeDetector.DetectFileType(path, content)
 
+	// Update language statistics with thread safety
+	a.mu.Lock()
+	if fileType != "text/plain" && fileType != "" {
+		a.languageStats[fileType]++
+	}
+	a.totalFiles++
+	a.totalLines += len(strings.Split(string(content), "\n"))
+	a.mu.Unlock()
+
 	lang, err := a.getLanguage(fileType)
 	if err != nil {
-		return a.basicAnalyze(path, content, fileType)
+		// Pass modTime to basicAnalyze
+		return a.basicAnalyze(path, fileType, modTime)
 	}
 
-	// Get parser from pool
+	// Get parser from pool and ensure it's properly reset
 	parser := a.parserPool.Get().(*sitter.Parser)
 	parser.SetLanguage(lang)
-	defer a.parserPool.Put(parser)
 
-	tree, err := parser.ParseCtx(ctx, nil, content)
+	// Create a copy of the content for this parse operation
+	contentCopy := make([]byte, len(content))
+	copy(contentCopy, content)
+
+	// Parse with the copied content
+	tree, err := parser.ParseCtx(ctx, nil, contentCopy)
 	if err != nil {
+		a.parserPool.Put(parser)
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
-	defer tree.Close()
 
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
+	// Get root node before putting parser back
 	rootNode := tree.RootNode()
 	if rootNode == nil {
+		tree.Close()
+		a.parserPool.Put(parser)
 		return nil, fmt.Errorf("failed to get root node")
 	}
 
-	symbols, err := a.extractSymbolsFromTree(rootNode, content, fileType, lang)
+	// Create a new cursor for this analysis
+	cursor := sitter.NewTreeCursor(rootNode)
+	defer cursor.Close()
+
+	// Extract all necessary information while we still have the tree
+	var errors []Error
+	if rootNode.HasError() {
+		errors = append(errors, Error{
+			Message: fmt.Sprintf("Syntax error in file %s", path),
+		})
+	}
+
+	symbols, err := a.extractSymbolsFromTree(rootNode, contentCopy, fileType, lang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract symbols: %w", err)
+		errors = append(errors, Error{
+			Message: fmt.Sprintf("Failed to extract symbols: %v", err),
+		})
 	}
 
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	imports, err := a.findImports(rootNode, content, fileType, lang)
+	imports, err := a.findImports(rootNode, contentCopy, fileType, lang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find imports: %w", err)
+		errors = append(errors, Error{
+			Message: fmt.Sprintf("Failed to find imports: %v", err),
+		})
 	}
 
-	complexity := a.calculateNodeComplexity(rootNode)
+	// Clean up tree-sitter resources
+	tree.Close()
+	a.parserPool.Put(parser)
 
-	return &FileContext{
-		Path:       path,
-		Type:       fileType,
-		Symbols:    symbols,
-		Imports:    imports,
-		Complexity: complexity,
-		UpdatedAt:  time.Now(),
-		AST:        rootNode.String(),
-	}, nil
+	// UpdatedAt should reflect the time of this analysis run.
+	updatedAt := time.Now()
+	// Keep the actual file mod time separate in ModTime field.
+
+	fileCtx := &FileContext{
+		Path:      path,
+		Type:      fileType,
+		Symbols:   symbols,
+		Imports:   imports,
+		UpdatedAt: updatedAt, // Use the analysis time
+		ModTime:   modTime,   // Keep the actual file mod time separate
+		Errors:    errors,
+	}
+
+	debug.Log("Analyzer.Analyze: Created FileContext for %s with UpdatedAt: %s, ModTime: %s", path, fileCtx.UpdatedAt.Format(time.RFC3339Nano), fileCtx.ModTime.Format(time.RFC3339Nano)) // Log both
+
+	return fileCtx, nil
 }
 
-func (a *DefaultAnalyzer) extractSymbolsFromTree(node *sitter.Node, content []byte, fileType string, lang *sitter.Language) ([]Symbol, error) {
-	var symbols []Symbol
+// extractSymbolsFromTree extracts symbols using tree-sitter queries based on capture names.
+func (a *DefaultAnalyzer) extractSymbolsFromTree(node *sitter.Node, content []byte, fileType string, lang *sitter.Language) ([]SymbolContext, error) {
+	var symbols []SymbolContext
+	if node == nil || len(content) == 0 || lang == nil {
+		return symbols, nil
+	}
+
 	query, err := a.getQuery("symbol", fileType, lang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query: %w", err)
+		// If no symbol query exists for the language, return empty symbols gracefully
+		if strings.Contains(err.Error(), "no query available") {
+			return symbols, nil
+		}
+		return nil, fmt.Errorf("failed to get symbol query: %w", err)
 	}
 
 	// Get cursor from pool
 	qc := a.cursorPool.Get().(*sitter.QueryCursor)
-	defer a.cursorPool.Put(qc)
+	defer a.cursorPool.Put(qc) // Return cursor to pool when done
 
 	qc.Exec(query, node)
 
+	// Map capture names to SymbolType
+	captureToSymbolType := map[string]SymbolType{
+		"func.name":        Function,
+		"method.name":      Function,
+		"getter.name":      Function,
+		"setter.name":      Function,
+		"constructor.name": Function,
+		"class.name":       Class,
+		"struct.name":      Class, // Treat structs like classes
+		"interface.name":   Interface,
+		"trait.name":       Interface, // Treat traits like interfaces
+		"enum.name":        Enum,
+		"type.name":        Type,
+		"var.name":         Variable,
+		"const.name":       Constant,
+		"field.name":       Field,
+		"property.name":    Field, // Treat properties like fields
+		"ivar.name":        Field,
+		"cvar.name":        Field,
+		"module.name":      Module,
+		"annotation.name":  Modifier,
+		// TS/TSX specific captures
+		"component.name":      Constant,
+		"react_component":     Constant,
+		"function.name":       Function,
+		"method_signature":    Function,
+		"call_signature":      Function,
+		"arrow_function":      Function,
+		"type_alias":          Type,
+		"public_field":        Field,
+		"property_identifier": Field,
+	}
+
+	// Process matches
 	for {
 		match, ok := qc.NextMatch()
 		if !ok {
 			break
 		}
 
+		var symbolName string
+		var symbolType SymbolType
+		var symbolNode *sitter.Node
+
+		// Find the primary capture for name and determine type
 		for _, capture := range match.Captures {
-			if capture.Node == nil {
-				continue
+			captureName := query.CaptureNameForId(capture.Index)
+			if st, ok := captureToSymbolType[captureName]; ok {
+				symbolType = st
+				symbolNode = capture.Node // Node containing the symbol's name/identifier
+
+				// Extract the name content safely
+				if symbolNode != nil {
+					startByte := symbolNode.StartByte()
+					endByte := symbolNode.EndByte()
+					if startByte < uint32(len(content)) && endByte <= uint32(len(content)) && startByte < endByte {
+						symbolName = string(content[startByte:endByte])
+					}
+				}
+				break // Found the primary name capture for this match
+			}
+		}
+
+		// If we found a valid symbol name and type, create the context
+		if symbolName != "" && symbolType != "" && symbolNode != nil {
+			// Use the node of the *entire match* for line numbers, not just the name node
+			matchNode := match.Captures[0].Node // Assuming first capture covers the whole pattern
+			if len(match.Captures) > 0 && match.Captures[0].Node != nil {
+				matchNode = match.Captures[0].Node
 			}
 
-			content := capture.Node.Content(content)
-			if len(content) == 0 {
-				continue
+			symbolCtx := SymbolContext{
+				Name:      symbolName,
+				Type:      string(symbolType),
+				StartLine: int(matchNode.StartPoint().Row) + 1,
+				EndLine:   int(matchNode.EndPoint().Row) + 1,
 			}
-
-			symbol := Symbol{
-				Name:      string(content),
-				Type:      capture.Node.Type(),
-				StartLine: int(capture.Node.StartPoint().Row) + 1,
-				EndLine:   int(capture.Node.EndPoint().Row) + 1,
-			}
-			symbol.Complexity = a.calculateNodeComplexity(capture.Node)
-			symbols = append(symbols, symbol)
+			symbols = append(symbols, symbolCtx)
 		}
 	}
 
 	return symbols, nil
 }
 
-func (a *DefaultAnalyzer) getSymbolQueryForLanguage(fileType string) string {
-	queries := map[string]string{
-		"go": `
-            (function_declaration
-                name: (identifier) @func.name) @function
-            (method_declaration
-                name: (field_identifier) @method.name) @method
-            (type_declaration 
-                (type_spec 
-                    name: (type_identifier) @type.name
-                    type: [(struct_type) (interface_type)] @type.kind)) @type
-        `,
-		"javascript": `
-            ; Functions
-            (function_declaration 
-                name: (identifier) @function.name)
-            ; Classes
-            (class_declaration 
-                name: (identifier) @class.name)
-            ; Methods
-            (method_definition 
-                name: (property_identifier) @method.name)
-            ; Function expressions in variable declarations
-            (variable_declarator
-                name: (identifier) @var.name
-                value: (function_expression))
-            ; Arrow functions in variable declarations
-            (variable_declarator
-                name: (identifier) @var.name
-                value: (arrow_function))
-            ; Object methods
-            (pair
-                key: (property_identifier) @method.name
-                value: (function_expression))
-            ; Arrow functions in object literals
-            (pair
-                key: (property_identifier) @method.name
-                value: (arrow_function))
-        `,
-		"python": `
-            (function_definition
-                name: (identifier) @func.name) @function
-            (class_definition
-                name: (identifier) @class.name) @class
-            (decorated_definition) @decorated
-        `,
-		"rust": `
-            (function_item
-                name: (identifier) @func.name) @function
-            (struct_item
-                name: (type_identifier) @struct.name) @struct
-            (impl_item) @impl
-            (trait_item
-                name: (type_identifier) @trait.name) @trait
-        `,
-		"java": `
-            (method_declaration
-                name: (identifier) @method.name) @method
-            (class_declaration
-                name: (identifier) @class.name) @class
-            (interface_declaration
-                name: (identifier) @interface.name) @interface
-        `,
-		"ruby": `
-            (method
-                name: (identifier) @method.name) @method
-            (class
-                name: (constant) @class.name) @class
-            (module
-                name: (constant) @module.name) @module
-        `,
-		"cpp": `
-            (function_definition
-                declarator: (function_declarator
-                    declarator: (identifier) @func.name)) @function
-            (class_specifier
-                name: (type_identifier) @class.name) @class
-            (namespace_definition
-                name: (identifier) @namespace.name) @namespace
-        `,
-		"css": `
-            (keyframe_block_list
-                (keyframe_block 
-                    (block 
-                        (declaration 
-                            (property_name) @property.name)))) @keyframe
-            (rule_set
-                (selectors
-                    (class_selector) @class.name)
-                (block)) @rule
-            (rule_set
-                (selectors
-                    (id_selector) @id.name)
-                (block)) @rule
-            (media_statement) @media
-        `,
-		"html": `
-            (element
-                (start_tag
-                    (tag_name) @tag.name)) @element
-            (script_element) @script
-            (style_element) @style
-            (element
-                (start_tag
-                    (attribute
-                        (attribute_name) @attr.name))) @element
-        `,
-		"lua": `
-            (function_declaration
-                name: (identifier) @func.name) @function
-            (function_definition
-                name: (dot_index_expression) @method.name) @method
-            (local_function
-                name: (identifier) @local_func.name) @local_function
-            (table_constructor) @table
-        `,
-	}
-
-	return queries[fileType]
-}
-
-func (a *DefaultAnalyzer) getQuery(queryType, fileType string, lang *sitter.Language) (*sitter.Query, error) {
-	cacheKey := fmt.Sprintf("%s_%s", queryType, fileType)
-
-	a.mu.RLock()
-	if query, ok := a.queries[cacheKey]; ok {
-		a.mu.RUnlock()
-		return query, nil
-	}
-	a.mu.RUnlock()
-
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	if query, ok := a.queries[cacheKey]; ok {
-		return query, nil
-	}
-
-	var queryStr string
-	switch queryType {
-	case "symbol":
-		queryStr = a.getSymbolQueryForLanguage(fileType)
-	case "import":
-		queryStr = a.getImportQueryForLanguage(fileType)
-	default:
-		return nil, fmt.Errorf("unknown query type: %s", queryType)
-	}
-
-	if queryStr == "" {
-		return nil, nil
-	}
-
-	query, err := sitter.NewQuery([]byte(queryStr), lang)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create query: %w", err)
-	}
-
-	a.queries[cacheKey] = query
-	return query, nil
-}
-
+// findImports returns a list of import paths from the given node
 func (a *DefaultAnalyzer) findImports(node *sitter.Node, content []byte, fileType string, lang *sitter.Language) ([]string, error) {
 	var imports []string
+	if node == nil || len(content) == 0 || lang == nil {
+		return imports, nil
+	}
+
 	query, err := a.getQuery("import", fileType, lang)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query: %w", err)
+		// Gracefully handle missing import queries
+		if strings.Contains(err.Error(), "no query available") {
+			return imports, nil
+		}
+		return nil, fmt.Errorf("failed to get import query: %w", err)
 	}
 
 	// Get cursor from pool
 	qc := a.cursorPool.Get().(*sitter.QueryCursor)
-	defer a.cursorPool.Put(qc)
+	defer a.cursorPool.Put(qc) // Return cursor to pool
 
 	qc.Exec(query, node)
 
+	// Process matches
+	processedPaths := make(map[string]bool) // Track unique import paths per file
 	for {
 		match, ok := qc.NextMatch()
 		if !ok {
 			break
 		}
 
+		// Find the capture named "@import.path"
 		for _, capture := range match.Captures {
-			if capture.Node == nil {
-				continue
-			}
-			importPath := capture.Node.Content(content)
-			if len(importPath) == 0 {
-				continue
-			}
-
-			// Clean up the import path (remove quotes for Go imports)
-			importPath = strings.Trim(string(importPath), `"'`)
-			if importPath != "" {
-				imports = append(imports, importPath)
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName == "import.path" && capture.Node != nil {
+				// Extract the path content safely
+				node := capture.Node
+				startByte := node.StartByte()
+				endByte := node.EndByte()
+				if startByte < uint32(len(content)) && endByte <= uint32(len(content)) && startByte < endByte {
+					importPath := string(content[startByte:endByte])
+					// Basic cleaning (remove quotes) - normalization happens later
+					importPath = strings.Trim(importPath, `"'`)
+					// Skip non-package imports like "Data service initialized"
+					if importPath != "" && !processedPaths[importPath] && !strings.Contains(importPath, " ") {
+						imports = append(imports, importPath)
+						processedPaths[importPath] = true
+					}
+				}
+				break // Found the path for this match
 			}
 		}
 	}
-
 	return imports, nil
 }
 
-func (a *DefaultAnalyzer) calculateNodeComplexity(node *sitter.Node) int {
-	complexity := 1
-
-	// Create a new cursor for each calculation to avoid concurrency issues
-	cursor := sitter.NewTreeCursor(node)
-	defer cursor.Close()
-
-	controlStructures := map[string]bool{
-		"if_statement":           true,
-		"for_statement":          true,
-		"while_statement":        true,
-		"switch_statement":       true,
-		"catch_clause":           true,
-		"conditional_expression": true,
-		"binary_expression":      true,
-	}
-
-	var traverse func()
-	traverse = func() {
-		if controlStructures[cursor.CurrentNode().Type()] {
-			complexity++
-		}
-
-		if cursor.GoToFirstChild() {
-			traverse()
-			cursor.GoToParent()
-		}
-
-		if cursor.GoToNextSibling() {
-			traverse()
-		}
-	}
-
-	traverse()
-	return complexity
-}
-
-func (a *DefaultAnalyzer) basicAnalyze(path string, content []byte, fileType string) (*FileContext, error) {
+// basicAnalyze provides basic analysis for unsupported file types
+// Accepts modTime from the caller to ensure consistency
+func (a *DefaultAnalyzer) basicAnalyze(path string, fileType string, modTime time.Time) (*FileContext, error) {
 	// Provide basic analysis for unsupported file types
 	return &FileContext{
 		Path:      path,
 		Type:      fileType,
-		UpdatedAt: time.Now(),
-		// Basic complexity based on file size
-		Complexity: len(content) / 1000,
+		UpdatedAt: time.Now(), // Analysis time
+		ModTime:   modTime,    // File system mod time
 	}, nil
 }
 
-func (a *DefaultAnalyzer) getImportQueryForLanguage(fileType string) string {
-	queries := map[string]string{
-		"go": `
-            ; Standard imports
-            (import_declaration 
-                (import_spec_list
-                    (import_spec
-                        path: (interpreted_string_literal) @import.path)))
-            ; Single imports
-            (import_declaration
-                (import_spec
-                    path: (interpreted_string_literal) @import.path))
-        `,
-		"javascript": `
-            ; ES6 imports
-            (import_statement 
-                source: (string) @import.path)
-            ; CommonJS require
-            (call_expression
-                function: (identifier) @require
-                arguments: (arguments (string) @import.path)
-                (#eq? @require "require"))
-        `,
-		"python": `
-            ; Import statements
-            (import_statement 
-                name: (dotted_name) @import.path)
-            ; From imports
-            (import_from_statement 
-                module_name: (dotted_name) @import.path)
-        `,
-		"java": `
-            (import_declaration
-                name: (identifier) @import.path)
-        `,
-		"rust": `
-            (use_declaration 
-                path: (identifier) @import.path)
-        `,
-		"cpp": `
-            (preproc_include
-                path: (string_literal) @import.path)
-            (preproc_include
-                path: (system_lib_string) @import.path)
-        `,
-	}
-	return queries[fileType]
-}
-
-// Add cleanup method to properly close resources
+// Clear pools
 func (a *DefaultAnalyzer) Close() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -526,7 +413,92 @@ func (a *DefaultAnalyzer) Close() {
 	a.languages = make(map[string]*sitter.Language)
 	a.queries = make(map[string]*sitter.Query)
 
-	// Clear pools
-	a.parserPool = nil
-	a.cursorPool = nil
+	// Clear pools - we need to create new empty pools rather than setting to nil
+	a.parserPool = &sync.Pool{
+		New: func() interface{} {
+			return sitter.NewParser()
+		},
+	}
+	a.cursorPool = &sync.Pool{
+		New: func() interface{} {
+			return sitter.NewQueryCursor()
+		},
+	}
+}
+
+// GetLanguages returns the primary (most frequently used) language and secondary languages
+func (a *DefaultAnalyzer) GetLanguages() (string, []string) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	var maxCount int
+	var primary string
+	var others []string
+
+	for lang, count := range a.languageStats {
+		if count > maxCount {
+			maxCount = count
+			primary = lang
+		}
+		if lang != "text/plain" && lang != "" {
+			others = append(others, lang)
+		}
+	}
+
+	// Remove primary from others if it exists
+	for i, lang := range others {
+		if lang == primary {
+			others = append(others[:i], others[i+1:]...)
+			break
+		}
+	}
+
+	return primary, others
+}
+
+// GetTotalFiles returns the total number of files analyzed
+func (a *DefaultAnalyzer) GetTotalFiles() int {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.totalFiles
+}
+
+// GetTotalLines returns the total number of lines analyzed
+func (a *DefaultAnalyzer) GetTotalLines() int {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.totalLines
+}
+
+// GetLanguageStats returns a copy of the language statistics map
+func (a *DefaultAnalyzer) GetLanguageStats() map[string]int {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	stats := make(map[string]int, len(a.languageStats))
+	for k, v := range a.languageStats {
+		stats[k] = v
+	}
+	return stats
+}
+
+// AddLanguageStats adds to the language statistics count
+func (a *DefaultAnalyzer) AddLanguageStats(lang string, count int) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.languageStats[lang] += count
+}
+
+// AddTotalFiles adds to the total files count
+func (a *DefaultAnalyzer) AddTotalFiles(count int) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.totalFiles += count
+}
+
+// AddTotalLines adds to the total lines count
+func (a *DefaultAnalyzer) AddTotalLines(count int) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.totalLines += count
 }
