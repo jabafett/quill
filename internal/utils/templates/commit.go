@@ -35,15 +35,19 @@ Template:
 
 [optional footer(s)]
 
-Context:
-<repo_context>
+{{if .RelatedContext}}
+<context>
+Analysis based on repository index suggests the following related context:
+{{.RelatedContext}}
+</context>
+{{end}}
+
 <files>
 Files changed: {{.Files}}
 </files>
-</repo_context>
 <diff>
 {{.Diff}}
 </diff>
 Generate only the commit message without any explanation or additional text.
 `
-) 
+)

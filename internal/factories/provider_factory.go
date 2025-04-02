@@ -15,22 +15,35 @@ type Provider interface {
 	Generate(ctx context.Context, prompt string, opts ai.GenerateOptions) ([]string, error)
 }
 
+// rateLimitedProvider wraps a base provider with rate limiting and retry logic
+type rateLimitedProvider struct {
+	base          Provider
+	enableRetries bool
+}
+
+// GenerateOptions contains options for the generate factory
+type ProviderOptions struct {
+	Provider    string
+	Candidates  int
+	Temperature float32
+}
+
 func (p *rateLimitedProvider) Generate(ctx context.Context, prompt string, opts ai.GenerateOptions) ([]string, error) {
 	if p.enableRetries {
 		var result []string
 		err := retryWithBackoff(ctx, func() error {
 			var genErr error
-			result, genErr = generateWithRateLimit(ctx, p.base, prompt, opts)
+			result, genErr = generateSingleInstance(ctx, p.base, prompt, opts)
 			return genErr
 		})
 		return result, err
 	}
 
-	return generateWithRateLimit(ctx, p.base, prompt, opts)
+	return generateSingleInstance(ctx, p.base, prompt, opts)
 }
 
 // CreateProvider creates a new AI provider instance
-func NewProvider(cfg *config.Config, opts GenerateOptions) (Provider, error) {
+func NewProvider(cfg *config.Config, opts ProviderOptions) (Provider, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
@@ -107,19 +120,14 @@ func retryWithBackoff(ctx context.Context, fn func() error) error {
 	return fmt.Errorf("max retries exceeded: %w", err)
 }
 
-// generateWithRateLimit applies rate limiting to generation requests
-func generateWithRateLimit(ctx context.Context, provider Provider, prompt string, opts ai.GenerateOptions) ([]string, error) {
+// generateSingleInstance ensures only one request is made at a time
+func generateSingleInstance(ctx context.Context, provider Provider, prompt string, opts ai.GenerateOptions) ([]string, error) {
 	if err := limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit wait failed: %w", err)
 	}
 	return provider.Generate(ctx, prompt, opts)
 }
 
-// rateLimitedProvider wraps a base provider with rate limiting and retry logic
-type rateLimitedProvider struct {
-	base          Provider
-	enableRetries bool
-}
 
 // expose rateLimitedProvider for testing
 func GetRateLimitedProvider(base Provider, enableRetries bool) *rateLimitedProvider {

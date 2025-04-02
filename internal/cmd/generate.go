@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jabafett/quill/internal/factories"
+	"github.com/jabafett/quill/internal/providers"
 	"github.com/jabafett/quill/internal/ui"
 	"github.com/jabafett/quill/internal/utils/debug"
 	"github.com/jabafett/quill/internal/utils/helpers"
@@ -60,7 +61,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create generate factory with options
-	generator, err := factories.NewGenerateFactory(factories.GenerateOptions{
+	generator, err := providers.NewGenerateFactory(factories.ProviderOptions{
 		Provider:    providerVal,
 		Candidates:  candidatesVal,
 		Temperature: temperatureVal,
@@ -71,7 +72,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Errorf("failed to create generate factory: %w", err)
 	}
-
 
 	// Generate messages
 	msgs, err := generator.Generate(context.Background())
