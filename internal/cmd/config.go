@@ -35,8 +35,8 @@ var getCmd = &cobra.Command{
 The key should be provided in dot notation for nested settings. For example:
   quill config get core.default_provider
   quill config get providers.gemini.temperature`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runGet,
+	Args: cobra.ExactArgs(1),
+	RunE: runGet,
 }
 
 var setCmd = &cobra.Command{
@@ -49,8 +49,8 @@ Use dot notation to access nested settings. For example:
   quill config set providers.gemini.temperature 0.7
 
 Changes are immediately written to ~/.config/quill.toml`,
-	Args:  cobra.ExactArgs(2),
-	RunE:  runSet,
+	Args: cobra.ExactArgs(2),
+	RunE: runSet,
 }
 
 var setKeyCmd = &cobra.Command{
@@ -65,8 +65,8 @@ Supported providers:
 
 The API key is stored securely in your system's keyring/keychain and is never
 written to disk in plaintext.`,
-	Args:  cobra.ExactArgs(2),
-	RunE:  runSetKey,
+	Args: cobra.ExactArgs(2),
+	RunE: runSetKey,
 }
 
 var getKeyCmd = &cobra.Command{
@@ -80,8 +80,8 @@ Supported providers:
 - openai
 
 The key will be displayed in plaintext - use with caution.`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runGetKey,
+	Args: cobra.ExactArgs(1),
+	RunE: runGetKey,
 }
 
 var listCmd = &cobra.Command{
@@ -92,8 +92,8 @@ var listCmd = &cobra.Command{
 This command shows the complete contents of your ~/.config/quill.toml file,
 excluding sensitive information like API keys which are stored separately
 in your system's keyring.`,
-	Args:  cobra.NoArgs,
-	RunE:  runList,
+	Args: cobra.NoArgs,
+	RunE: runList,
 }
 
 func init() {
@@ -201,4 +201,4 @@ func printSettings(settings map[string]interface{}, indent int) {
 			fmt.Printf("%s%s: %v\n", indentStr, k, v)
 		}
 	}
-} 
+}
