@@ -47,6 +47,14 @@ BREAKING CHANGE: The password reset flow now requires a confirmation step.
 
 ______________________________________________________________________________________________________________________
 
+- Add a new password reset flow to the authentication system.
+- Include a new route for handling password reset requests.
+- Update the login page to display a message indicating that a password reset is required.
+
+BREAKING CHANGE: The password reset flow now requires a confirmation step.
+
+______________________________________________________________________________________________________________________
+
 <repo_description>
 {{.RepoDescription}}
 </repo_description>
