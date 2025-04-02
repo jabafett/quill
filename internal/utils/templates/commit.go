@@ -2,7 +2,7 @@ package templates
 
 // Template definitions
 const (
-        CommitMessageTemplate = `Your task is to generate a commit message.
+	CommitMessageTemplate = `Your task is to generate a commit message.
 The commit message should:
 - Separate subject from body with a blank line
 - Limit the subject line to 72 characters
@@ -14,6 +14,7 @@ The commit message should:
 - Focus only on the actual changes shown in the diff
 - Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
+- Do not hallucinate, do not guess
 
 Types:
 feat: New features that add functionality (e.g., "feat(auth): add password reset flow")
@@ -32,12 +33,16 @@ Template:
 
 [optional footer(s)]
 
-{{if .RelatedContext}}
-<context>
-Repository Summary:
-{{.RelatedContext}}
-</context>
-{{end}}
+Example:
+feat(auth): add password reset flow
+
+- Add a new password reset flow to the authentication system.
+- Include a new route for handling password reset requests.
+- Update the login page to display a message indicating that a password reset is required.
+
+BREAKING CHANGE: The password reset flow now requires a confirmation step.
+
+______________________________________________________________________________________________________________________
 
 <files>
 Files changed: {{.Files}}
