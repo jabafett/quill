@@ -8,7 +8,6 @@ import (
         "strings"
 
         "github.com/jabafett/quill/internal/utils/context"
-        "github.com/jabafett/quill/internal/utils/debug"
 )
 
 // ContextOptions contains configuration for the context provider
