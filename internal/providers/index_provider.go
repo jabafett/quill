@@ -208,7 +208,7 @@ Directory Structure:
 Readme Content:
 %s
 
-The summary should be 3-5 sentences describing what this repository is for, its main components, and its purpose.
+The summary should describe what this repository is for, its main components, and its purpose.
 Focus on the technical aspects and be specific about what the code does based on the directory structure and languages used.
 `, repoName, fileCount, languages, dirTree, readmeContent)
 
