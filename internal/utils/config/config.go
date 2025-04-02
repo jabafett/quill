@@ -86,9 +86,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigType("toml")
 
 	// Add all possible config paths and names
-	viper.AddConfigPath(".")                            // current directory
 	viper.AddConfigPath(filepath.Join(home, ".config")) // ~/.config/
-	viper.AddConfigPath(home)                           // home directory
 
 	// Try both config names
 	configNames := []string{"quill", ".quill"}
