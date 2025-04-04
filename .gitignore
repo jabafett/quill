@@ -1,6 +1,7 @@
 # Binary
 /quill
 /bin
+*.tar.gz
 
 # IDE
 .idea/
