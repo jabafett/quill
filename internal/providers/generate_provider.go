@@ -137,18 +137,16 @@ func (f *GenerateFactory) Generate(ctx context.Context) ([]string, error) {
 	debug.Log("Diff stats - Added: %d, Deleted: %d, Files: %d", added, deleted, len(files))
 
 	// Prepare template data
-	data := map[string]interface{}{
-		"Diff":           diff,
-		"AddedLines":     added,
-		"DeletedLines":   deleted,
-		"Files":          files,
-		"RelatedContext": "", // Default to empty string
+	data := map[string]any{
+		"Diff":            diff,
+		"Files":           files,
+		"RepoDescription": "", // Default to empty string
 	}
 
 	// Add repository summary if available
 	if f.contextProvider != nil && f.contextProvider.HasSummary() {
 		repoSummary := f.contextProvider.GetRepoSummary()
-		data["RelatedContext"] = repoSummary
+		data["RepoDescription"] = repoSummary
 		debug.Log("Added repository summary to prompt data")
 	} else {
 		debug.Log("No repository summary available. Run 'quill index' first for context-aware generation.")

@@ -43,9 +43,13 @@ BREAKING CHANGE: The password reset flow now requires a confirmation step.
 
 ______________________________________________________________________________________________________________________
 
-<files>
-Files changed: {{.Files}}
-</files>
+<repo_description>
+{{.RepoDescription}}
+</repo_description>
+
+<files_changed>
+{{.Files}}
+</files_changed>
 <diff>
 {{.Diff}}
 </diff>
