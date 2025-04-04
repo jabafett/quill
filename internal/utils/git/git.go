@@ -1,15 +1,15 @@
 package git
 
 import (
-	"fmt"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"strings"
+        "fmt"
+        "os/exec"
+        "path/filepath"
+        "strconv"
+        "strings"
 
-	"github.com/go-git/go-git/v5"
-	d "github.com/jabafett/quill/internal/utils/debug"
-	"github.com/jabafett/quill/internal/utils/helpers"
+        "github.com/go-git/go-git/v5"
+        d "github.com/jabafett/quill/internal/utils/debug"
+        "github.com/jabafett/quill/internal/utils/helpers"
 )
 
 type Repository struct {
@@ -18,11 +18,11 @@ type Repository struct {
 
 // NewRepository creates a new Repository instance
 func NewRepository(repoPath string) (*Repository, error) {
-	r, err := git.PlainOpen(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	return &Repository{repo: r}, nil
+        r, err := git.PlainOpen(repoPath)
+        if err != nil {
+                return nil, err
+        }
+        return &Repository{repo: r}, nil
 }
 
 // GetStagedDiff returns the git diff for staged changes
@@ -43,27 +43,27 @@ func (r *Repository) GetStagedDiffStats() (added int, deleted int, files []strin
                 return 0, 0, nil, fmt.Errorf("failed to get diff stats: %w", err)
         }
 
-	// Parse the numstat output
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	files = make([]string, 0, len(lines))
-	
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Fields(line)
-		if len(parts) >= 3 {
-			if a, err := strconv.Atoi(parts[0]); err == nil {
-				added += a
-			}
-			if d, err := strconv.Atoi(parts[1]); err == nil {
-				deleted += d
-			}
-			files = append(files, parts[2])
-		}
-	}
-	
-	return added, deleted, files, nil
+        // Parse the numstat output
+        lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+        files = make([]string, 0, len(lines))
+
+        for _, line := range lines {
+                if line == "" {
+                        continue
+                }
+                parts := strings.Fields(line)
+                if len(parts) >= 3 {
+                        if a, err := strconv.Atoi(parts[0]); err == nil {
+                                added += a
+                        }
+                        if d, err := strconv.Atoi(parts[1]); err == nil {
+                                deleted += d
+                        }
+                        files = append(files, parts[2])
+                }
+        }
+
+        return added, deleted, files, nil
 }
 
 
@@ -86,25 +86,25 @@ func (r *Repository) HasStagedChanges() (bool, error) {
                 }
         }
 
-	return false, helpers.ErrNoStagedChanges{}
+        return false, helpers.ErrNoStagedChanges{}
 }
 
 // GetRepoRootPath returns the absolute path to the repository's root directory
 func (r *Repository) GetRepoRootPath() (string, error) {
-	w, err := r.repo.Worktree()
-	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
-	}
-	return w.Filesystem.Root(), nil
+        w, err := r.repo.Worktree()
+        if err != nil {
+                return "", fmt.Errorf("failed to get worktree: %w", err)
+        }
+        return w.Filesystem.Root(), nil
 }
 
 // GetRepoName returns the name of the repository
 func (r *Repository) GetRepoName() (string, error) {
-	w, err := r.repo.Worktree()
-	if err != nil {
-		return "", fmt.Errorf("failed to get worktree: %w", err)
-	}
-	return filepath.Base(w.Filesystem.Root()), nil
+        w, err := r.repo.Worktree()
+        if err != nil {
+                return "", fmt.Errorf("failed to get worktree: %w", err)
+        }
+        return filepath.Base(w.Filesystem.Root()), nil
 }
 
 // GetCurrentBranch returns the name of the current branch
@@ -121,7 +121,7 @@ func (r *Repository) GetCurrentBranch() (string, error) {
     } else {
         branchName = ref.Hash().String()[:7]
     }
-	return branchName, nil
+        return branchName, nil
 }
 
 // Remaining git functions to fill out repository context fields
@@ -134,60 +134,60 @@ func (r *Repository) GetCurrentBranch() (string, error) {
 
 // ListTrackedFiles returns a list of all files tracked by git, respecting .gitignore
 func (r *Repository) ListTrackedFiles() ([]string, error) {
-	w, err := r.repo.Worktree()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %w", err)
-	}
+        w, err := r.repo.Worktree()
+        if err != nil {
+                return nil, fmt.Errorf("failed to get worktree: %w", err)
+        }
 
-	status, err := w.Status()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %w", err)
-	}
+        status, err := w.Status()
+        if err != nil {
+                return nil, fmt.Errorf("failed to get status: %w", err)
+        }
 
-	var files []string
-	for file, s := range status {
-		// Include files that are tracked
-		if s.Worktree != git.Untracked {
-			files = append(files, file)
-		}
-	}
-	d.Log("Found %d tracked files", len(files))
-	return files, nil
+        var files []string
+        for file, s := range status {
+                // Include files that are tracked
+                if s.Worktree != git.Untracked {
+                        files = append(files, file)
+                }
+        }
+        d.Log("Found %d tracked files", len(files))
+        return files, nil
 }
 
 
 func (r *Repository) GetNonIgnoredFiles() []string {
-	wt, err := r.repo.Worktree()
-	if err != nil {
-		d.Log("Error getting worktree: %v\n", err)
-		return nil
-	}
+        wt, err := r.repo.Worktree()
+        if err != nil {
+                d.Log("Error getting worktree: %v\n", err)
+                return nil
+        }
 
-	// Use git ls-files command as more reliable way to get tracked files
-	cmd := exec.Command("git", "ls-files")
-	cmd.Dir = wt.Filesystem.Root()
-	output, err := cmd.Output()
-	if err != nil {
-		d.Log("Error running git ls-files: %v\n", err)
-		// Fallback to status-based approach
-		status, err := wt.Status()
-		if err != nil {
-			d.Log("Error getting worktree status: %v\n", err)
-			return nil
-		}
+        // Use git ls-files command as more reliable way to get tracked files
+        cmd := exec.Command("git", "ls-files")
+        cmd.Dir = wt.Filesystem.Root()
+        output, err := cmd.Output()
+        if err != nil {
+                d.Log("Error running git ls-files: %v\n", err)
+                // Fallback to status-based approach
+                status, err := wt.Status()
+                if err != nil {
+                        d.Log("Error getting worktree status: %v\n", err)
+                        return nil
+                }
 
-		var nonIgnoredFiles []string
-		for filePath := range status {
-			nonIgnoredFiles = append(nonIgnoredFiles, filePath)
-		}
-		d.Log("Found %d non-ignored files (status fallback)", len(nonIgnoredFiles))
-		return nonIgnoredFiles
-	}
+                var nonIgnoredFiles []string
+                for filePath := range status {
+                        nonIgnoredFiles = append(nonIgnoredFiles, filePath)
+                }
+                d.Log("Found %d non-ignored files (status fallback)", len(nonIgnoredFiles))
+                return nonIgnoredFiles
+        }
 
-	// Parse ls-files output
-	files := strings.Split(strings.TrimSpace(string(output)), "\n")
-	d.Log("Found %d tracked files (ls-files)", len(files))
-	return files
+        // Parse ls-files output
+        files := strings.Split(strings.TrimSpace(string(output)), "\n")
+        d.Log("Found %d tracked files (ls-files)", len(files))
+        return files
 }
 // GetChangedFiles returns a list of modified files
 func (r *Repository) GetChangedFiles() ([]string, error) {
