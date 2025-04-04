@@ -2,7 +2,7 @@ package templates
 
 // Template definitions
 const (
-	CommitMessageTemplate = `Your task is to generate a commit message.
+	CommitMessageTemplate = `Your task is to generate a commit message for the given information. Please do not hallucinate.
 The commit message should:
 - Separate subject from body with a blank line
 - Limit the subject line to 72 characters
@@ -11,10 +11,9 @@ The commit message should:
 - Be specific about what was changed and how
 - Do not capitalize the first letter of the commit message
 - No periods or other punctuation at the end of any lines
-- Focus only on the actual changes shown in the diff
-- Include only factual information from the diff
 - If breaking change, add BREAKING CHANGE: in footer
-- Do not hallucinate, do not guess
+- Please refrain from discussing formatting changes
+- Find the noise in the inforrmation and focus in on what was changed
 
 Types:
 feat: New features that add functionality (e.g., "feat(auth): add password reset flow")
