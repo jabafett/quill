@@ -12,7 +12,7 @@ The commit message should:
 - Do not capitalize the first letter of the commit message
 - No periods or other punctuation at the end of any lines
 - If breaking change, add BREAKING CHANGE: in footer
-- Please refrain from discussing formatting changes
+- Please refrain from discussing formatting changes nor inferences about the scope of the change through code that has only been reformatted (e.g., indentation, line length, etc.)
 - Sift through the noise in the diff and information provided to zero in on what was modified, added, or removed
 
 Types:
