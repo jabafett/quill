@@ -13,7 +13,7 @@ The commit message should:
 - No periods or other punctuation at the end of any lines
 - If breaking change, add BREAKING CHANGE: in footer
 - Please refrain from discussing formatting changes
-- Find the noise in the inforrmation and focus in on what was changed
+- Sift through the noise in the diff and information provided to zero in on what was modified, added, or removed
 
 Types:
 feat: New features that add functionality (e.g., "feat(auth): add password reset flow")
