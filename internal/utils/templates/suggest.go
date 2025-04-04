@@ -5,19 +5,70 @@ package templates
 const SuggestTemplate = `# TASK
 Analyze the repository changes and suggest logical commit groupings. Group related changes together and create appropriate conventional commit messages for each group.
 
-# REPOSITORY CONTEXT
-{{.Context}}
+# RESPONSE FORMAT
 
-# CHANGES TO ANALYZE
+Your response must be formatted in XML as follows:
 
-## Staged Changes
-{{.Staged}}
+<suggestions>
+  <group>
+    <description>Brief description of the first logical grouping</description>
+    <files>
+      <file>file1.ext</file>
+      <file>file2.ext</file>
+      <file>file3.ext</file>
+    </files>
+    <commit>
+      <header>type(scope): short description</header>
+      <body>Detailed explanation of what was changed and why</body>
+      <footer>Optional footer notes like BREAKING CHANGE</footer>
+    </commit>
+  </group>
+  <group>
+    <description>Brief description of the second logical grouping</description>
+    <files>
+      <file>file4.ext</file>
+      <file>file5.ext</file>
+    </files>
+    <commit>
+      <header>type(scope): short description</header>
+      <body>Detailed explanation of what was changed and why</body>
+    </commit>
+  </group>
+</suggestions>
 
-## Unstaged Changes
-{{.Unstaged}}
+# EXAMPLE
 
-## Untracked Files
-{{.Untracked}}
+<suggestions>
+  <group>
+    <description>Authentication system implementation</description>
+    <files>
+      <file>auth/login.go</file>
+      <file>auth/middleware.go</file>
+      <file>auth/user.go</file>
+      <file>tests/auth_test.go</file>
+    </files>
+    <commit>
+      <header>feat(auth): implement user authentication system</header>
+      <body>- Add a new password reset flow to the authentication system
+- Include a new route for handling password reset requests
+- Update the login page to display a message indicating that a password reset is required</body>
+      <footer>BREAKING CHANGE: The password reset flow now requires a confirmation step</footer>
+    </commit>
+  </group>
+  <group>
+    <description>Fix database connection timeout</description>
+    <files>
+      <file>db/connection.go</file>
+      <file>config/database.yaml</file>
+    </files>
+    <commit>
+      <header>fix(db): increase connection timeout to prevent disconnects</header>
+      <body>Increase the database connection timeout from 5s to 30s to prevent disconnects during high load periods</body>
+    </commit>
+  </group>
+</suggestions>
+
+IMPORTANT: Your response must be valid XML and follow the exact format shown above.
 
 # COMMIT MESSAGE GUIDELINES
 
@@ -54,72 +105,19 @@ Analyze the repository changes and suggest logical commit groupings. Group relat
 - Include documentation with the code it documents
 - If all changes are related to a single feature or fix, use just one grouping
 
-# RESPONSE FORMAT
 
-Your response must be formatted in XML as follows:
+# REPOSITORY CONTEXT
+{{.Context}}
 
-```xml
-<suggestions>
-  <group>
-    <description>Brief description of the first logical grouping</description>
-    <files>
-      <file>file1.ext</file>
-      <file>file2.ext</file>
-      <file>file3.ext</file>
-    </files>
-    <commit>
-      <header>type(scope): short description</header>
-      <body>Detailed explanation of what was changed and why</body>
-      <footer>Optional footer notes like BREAKING CHANGE</footer>
-    </commit>
-  </group>
-  <group>
-    <description>Brief description of the second logical grouping</description>
-    <files>
-      <file>file4.ext</file>
-      <file>file5.ext</file>
-    </files>
-    <commit>
-      <header>type(scope): short description</header>
-      <body>Detailed explanation of what was changed and why</body>
-    </commit>
-  </group>
-</suggestions>
-```
+# CHANGES TO ANALYZE
 
-# EXAMPLE
+## Staged Changes
+{{.Staged}}
 
-```xml
-<suggestions>
-  <group>
-    <description>Authentication system implementation</description>
-    <files>
-      <file>auth/login.go</file>
-      <file>auth/middleware.go</file>
-      <file>auth/user.go</file>
-      <file>tests/auth_test.go</file>
-    </files>
-    <commit>
-      <header>feat(auth): implement user authentication system</header>
-      <body>- Add a new password reset flow to the authentication system
-- Include a new route for handling password reset requests
-- Update the login page to display a message indicating that a password reset is required</body>
-      <footer>BREAKING CHANGE: The password reset flow now requires a confirmation step</footer>
-    </commit>
-  </group>
-  <group>
-    <description>Fix database connection timeout</description>
-    <files>
-      <file>db/connection.go</file>
-      <file>config/database.yaml</file>
-    </files>
-    <commit>
-      <header>fix(db): increase connection timeout to prevent disconnects</header>
-      <body>Increase the database connection timeout from 5s to 30s to prevent disconnects during high load periods</body>
-    </commit>
-  </group>
-</suggestions>
-```
+## Unstaged Changes
+{{.Unstaged}}
 
-IMPORTANT: Your response must be valid XML and follow the exact format shown above.
+## Untracked Files
+{{.Untracked}}
+
 `
