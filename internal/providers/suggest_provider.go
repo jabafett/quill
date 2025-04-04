@@ -244,7 +244,6 @@ func (f *SuggestFactory) Suggest(ctx context.Context) ([]helpers.SuggestionGroup
 	}
 
 	debug.Dump("AI Responses:", responses)
-
 	// Parse the responses into suggestion groups
 	suggestions := make([]helpers.SuggestionGroup, 0, len(responses))
 
