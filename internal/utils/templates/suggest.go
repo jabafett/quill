@@ -5,6 +5,38 @@ package templates
 const SuggestTemplate = `# TASK
 Analyze the repository changes and suggest logical commit groupings. Group related changes together and create appropriate conventional commit messages for each group.
 
+# RESPONSE FORMAT
+
+Your response must be formatted in XML as follows:
+
+
+<suggestions>
+  <group>
+    <description>Brief description of the first logical grouping</description>
+    <files>
+      <file>file1.ext</file>
+      <file>file2.ext</file>
+      <file>file3.ext</file>
+    </files>
+    <commit>
+      <header>type(scope): short description</header>
+      <body>Detailed explanation of what was changed and why</body>
+      <footer>Optional footer notes like BREAKING CHANGE</footer>
+    </commit>
+  </group>
+  <group>
+    <description>Brief description of the second logical grouping</description>
+    <files>
+      <file>file4.ext</file>
+      <file>file5.ext</file>
+    </files>
+    <commit>
+      <header>type(scope): short description</header>
+      <body>Detailed explanation of what was changed and why</body>
+    </commit>
+  </group>
+</suggestions>
+
 # REPOSITORY CONTEXT
 {{.Context}}
 
@@ -36,6 +68,9 @@ Analyze the repository changes and suggest logical commit groupings. Group relat
 - No periods or other punctuation at the end of any lines
 - Use body to explain what and why things were changed/added not how
 - If breaking change, add BREAKING CHANGE: in footer
+- Be specific about what was changed and how
+- Please refrain from discussing formatting changes nor inferences about the scope of the change through code that has only been reformatted (e.g., indentation, line length, etc.) look for functional changes, sometimes autoformatters will change many lines and this is not relevant but code might have still changed within the reformatted code
+- Sift through the noise in the diff and information provided to zero in on what was modified, added, or removed
 
 ## Types
 - feat: New features that add functionality
@@ -54,42 +89,8 @@ Analyze the repository changes and suggest logical commit groupings. Group relat
 - Include documentation with the code it documents
 - If all changes are related to a single feature or fix, use just one grouping
 
-# RESPONSE FORMAT
-
-Your response must be formatted in XML as follows:
-
-```xml
-<suggestions>
-  <group>
-    <description>Brief description of the first logical grouping</description>
-    <files>
-      <file>file1.ext</file>
-      <file>file2.ext</file>
-      <file>file3.ext</file>
-    </files>
-    <commit>
-      <header>type(scope): short description</header>
-      <body>Detailed explanation of what was changed and why</body>
-      <footer>Optional footer notes like BREAKING CHANGE</footer>
-    </commit>
-  </group>
-  <group>
-    <description>Brief description of the second logical grouping</description>
-    <files>
-      <file>file4.ext</file>
-      <file>file5.ext</file>
-    </files>
-    <commit>
-      <header>type(scope): short description</header>
-      <body>Detailed explanation of what was changed and why</body>
-    </commit>
-  </group>
-</suggestions>
-```
-
 # EXAMPLE
 
-```xml
 <suggestions>
   <group>
     <description>Authentication system implementation</description>
@@ -115,11 +116,13 @@ Your response must be formatted in XML as follows:
     </files>
     <commit>
       <header>fix(db): increase connection timeout to prevent disconnects</header>
-      <body>Increase the database connection timeout from 5s to 30s to prevent disconnects during high load periods</body>
+      <body>- Increase the database connection timeout from 5s to 30s to prevent disconnects during high load periods
+	- Add a new password reset flow to the authentication system.
+	- Include a new route for handling password reset requests.
+	- Update the login page to display a message indicating that a password reset is required.
     </commit>
   </group>
 </suggestions>
-```
 
 IMPORTANT: Your response must be valid XML and follow the exact format shown above.
 `
