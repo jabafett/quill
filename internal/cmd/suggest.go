@@ -6,6 +6,7 @@ import (
         "os/exec"
 
         tea "github.com/charmbracelet/bubbletea"
+        "github.com/jabafett/quill/internal/utils/debug"
         "github.com/jabafett/quill/internal/factories"
         "github.com/jabafett/quill/internal/providers"
         "github.com/jabafett/quill/internal/ui"
@@ -47,6 +48,7 @@ func init() {
         suggestCmd.Flags().Float32P("temperature", "t", 0, "Generation temperature (0.0-1.0, 0 for default)")
         suggestCmd.Flags().BoolP("staged-only", "s", false, "Only consider staged changes")
         suggestCmd.Flags().BoolP("unstaged-only", "u", false, "Only consider unstaged changes")
+        suggestCmd.Flags().BoolP("debug", "d", false, "Enable debug output")
 
         suggestCmd.RegisterFlagCompletionFunc("provider", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
                 return []string{"gemini", "anthropic", "openai", "ollama"}, cobra.ShellCompDirectiveNoFileComp
@@ -54,7 +56,15 @@ func init() {
 }
 
 func runSuggest(cmd *cobra.Command, args []string) error {
-        debug.Log("Starting suggest command")
+        // Get debug flag
+        debugFlag, err := cmd.Flags().GetBool("debug")
+        if err != nil {
+                return fmt.Errorf("failed to get debug flag: %w", err)
+        }
+
+        if debugFlag {
+                debug.Log("Starting suggest command")
+        }
 
         // Get flag values
         providerVal, candidatesVal, temperatureVal, err := helpers.SetGenerateFlagValues[string, int, float32](
@@ -104,9 +114,10 @@ func runSuggest(cmd *cobra.Command, args []string) error {
         }
 
         // Create an interactive model for suggestion selection
-        model := ui.NewSuggestModel(suggestions)
+        model := ui.NewSuggestModel(suggestions, debugFlag)
         p := tea.NewProgram(
                 model,
+                tea.WithAltScreen(),       // Use alternate screen buffer
                 tea.WithMouseCellMotion(), // Enable mouse support
         )
 
@@ -118,41 +129,41 @@ func runSuggest(cmd *cobra.Command, args []string) error {
         // Get selected suggestion
         selectedModel := finalModel.(ui.SuggestModel)
         if selectedModel.Quitting() {
-                fmt.Print("\033[H\033[2J")
                 return fmt.Errorf("operation cancelled")
         }
 
         // If the user selected a suggestion, apply it
         if selectedModel.HasSelection() {
                 selected := selectedModel.Selected()
-                cmd.Printf("Selected grouping: %s\n", selected.Description)
-                
+                debug.Log("Selected grouping: %s\n", selected.Description)
+
                 // If the user wants to stage the suggested files
                 if selected.ShouldStage {
+                        // Actually execute git add for each file
                         for _, file := range selected.Files {
-                                cmd.Printf("Staging file: %s\n", file)
-                                // Execute git add for each file
+                                debug.Log("Staging file: %s\n", file)
                                 stageCmd := exec.Command("git", "add", file)
                                 err := stageCmd.Run()
                                 if err != nil {
-                                        fmt.Printf("Warning: Failed to stage file %s: %v\n", file, err)
+                                        return fmt.Errorf("failed to stage file %s: %v", file, err)
                                 }
                         }
-                        fmt.Println("\nFiles staged successfully. You can now run 'git status' to verify.")
+                        
+                        debug.Log("Files staged successfully.")
                         if selected.Message != "" {
-                                fmt.Printf("\nSuggested commit message: %s\n", selected.Message)
-                                fmt.Println("\nTo commit with this message, run:")
-                                fmt.Printf("  git commit -m \"%s\"\n", selected.Message)
+                                debug.Log("Suggested commit message: %s\n", selected.Message)
+                                debug.Log("To commit with this message, run:")
+                                debug.Log("  git commit -m \"%s\"\n", selected.Message)
                         }
                 } else {
                         // Just show the suggested message
                         if selected.Message != "" {
-                                fmt.Printf("\nSuggested commit message: %s\n", selected.Message)
-                                fmt.Println("\nTo stage and commit these changes, run:")
+                                debug.Log("Suggested commit message: %s\n", selected.Message)
+                                debug.Log("To stage and commit these changes, run:")
                                 for _, file := range selected.Files {
-                                        fmt.Printf("  git add %s\n", file)
+                                        debug.Log("  git add %s\n", file)
                                 }
-                                fmt.Printf("  git commit -m \"%s\"\n", selected.Message)
+                                debug.Log("  git commit -m \"%s\"\n", selected.Message)
                         }
                 }
         }
