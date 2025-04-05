@@ -73,22 +73,22 @@ func GetProviderConfig(provider string) string {
 	case "gemini":
 		return `    model = "gemini-2.5-flash"
     max_tokens = 8192
-    temperature = 0.5
+    temperature = 0.3
     enable_retries = true`
 	case "anthropic":
 		return `    model = "claude-3-5-haiku-20241022"
     max_tokens = 8192
-    temperature = 0.5
+    temperature = 0.3
     enable_retries = true`
 	case "openai":
 		return `    model = "gpt-4o-mini"
     max_tokens = 8192
-    temperature = 0.5
+    temperature = 0.3
     enable_retries = true`
 	case "ollama":
 		return `    model = "qwen2.5-8b-instruct"
     max_tokens = 8192
-    temperature = 0.5
+    temperature = 0.3
     enable_retries = true`
 	default:
 		return ""
