@@ -136,23 +136,23 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		selected := selectedModel.Selected()
 		debug.Log("Selected grouping: %s\n", selected.Description)
 
-		// If the user wants to stage the suggested files
+		// If the user wants to stage and commit the suggested files
 		if selected.ShouldStage {
-			// Actually execute git add for each file
 			for _, file := range selected.Files {
 				debug.Log("Staging file: %s\n", file)
 				stageCmd := exec.Command("git", "add", file)
-				err := stageCmd.Run()
-				if err != nil {
+				if err := stageCmd.Run(); err != nil {
 					return fmt.Errorf("failed to stage file %s: %v", file, err)
 				}
 			}
-
 			debug.Log("Files staged successfully.")
 			if selected.Message != "" {
-				debug.Log("Suggested commit message: %s\n", selected.Message)
-				debug.Log("To commit with this message, run:")
-				debug.Log("  git commit -m \"%s\"\n", selected.Message)
+				debug.Log("Committing changes with message: %s\n", selected.Message)
+				commitCmd := exec.Command("git", "commit", "-m", selected.Message)
+				if err := commitCmd.Run(); err != nil {
+					return fmt.Errorf("failed to commit changes: %v", err)
+				}
+				debug.Log("Changes committed successfully.")
 			}
 		} else {
 			// Just show the suggested message
