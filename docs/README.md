@@ -1,8 +1,10 @@
 # ![quill](https://github.com/jabafett/quill/blob/main/docs/logo/quill-full-logo-50.png?raw=true, "quill") quill
 
-## **Release 0.1.0 🎉**
+## **Release 0.2.0 🎉**
 
-Currently in development, only: `init`, `generate`, `config` commands are available.
+Currently in development, only: `init`, `generate`, `suggest`, and `config` commands are available.
+
+![image](https://github.com/user-attachments/assets/ae3ccf4e-a42b-41b7-991e-8a41ea91a04d)
 
 `quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
@@ -15,11 +17,12 @@ Currently in development, only: `init`, `generate`, `config` commands are availa
 
 - 🤖 **AI-Powered Generation**: Intelligent commit message suggestions using state-of-the-art language models
 - 🎯 **Conventional Commits**: Automatically formatted according to the conventional commits specification
-- 🎨 **Interactive UI**: Beautiful terminal interface for selecting and editing commit messages
+- 🎨 **Interactive UI**: Beautiful terminal interface for selecting and editing commit messages, including a fully-featured suggest UI for commit groupings
 - ⚡ **Multiple Providers**: Support for OpenAI, Gemini, Anthropic, and Ollama
 - 🔒 **Secure**: API keys stored securely in your system's keyring
 - 🚀 **Performance**: Rate limiting and retry mechanisms built-in
 - ⚙️ **Configurable**: Extensive configuration options for customizing behavior
+- 🧩 **Commit Grouping Suggestions**: Use `quill suggest` to analyze changes and get AI-powered suggestions for logical commit groups, with auto-staging and commit support
 
 ## Quick Start
 
@@ -40,7 +43,7 @@ quill generate
 | --------------------- | ------------------------------------------- |
 | (✅) `quill init`     | Create initial configuration                |
 | (✅) `quill generate` | Generate commit message from staged changes |
-| (🚧) `quill suggest`  | Suggest file groupings based on indexing    |
+| (✅) `quill suggest`  | Suggest logical commit groupings            |
 | (🚧) `quill index`    | Index repository context                    |
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
@@ -52,6 +55,7 @@ quill generate
 This is the initial release of Quill, focusing on core functionality and provider integration. The following features are now available:
 
 #### Core Features
+
 - 🛠️ Basic Commands: `init`, `generate`, and `config` commands are fully implemented
 - 🤖 Multi-Provider Support:
   - Google Gemini
@@ -68,6 +72,7 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Message editing
 
 #### Technical Improvements
+
 - ⚡ Performance Features:
   - Rate limiting (1 request/second)
   - Retry mechanism with backoff
@@ -81,11 +86,13 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Cross-reference tracking
 
 #### Known Limitations
+
 - Only basic commands (`init`, `generate`, `config`) are available
 - Advanced features like indexing and smart suggestions are still in development
 - Some context features (historical analysis, contributor tracking) are postponed
 
 #### Installation
+
 ```bash
 go install github.com/jabafett/quill@v0.1.0
 
@@ -171,7 +178,6 @@ Available settings:
 - `enable_retries`: Enable automatic retry on failure
 - `candidate_count`: Default number of suggestions
 
-
 ### Environment Variables
 
 While API keys are preferably stored in the system keyring, they can be provided via environment variables:
@@ -184,16 +190,26 @@ export OPENAI_API_KEY="your-key"
 
 ### Interactive UI Controls
 
-When selecting commit messages:
+#### Commit Message Selection UI
 
 - `↑/↓` or `j/k`: Navigate options
 - `enter`: Select message and create commit
 - `e`: Edit message before commit
 - `q`: Quit without committing
 
+#### Suggest Command UI
+
+- `↑/↓` or `j/k`: Navigate suggestions
+- `enter`: Select a suggestion group
+- `e`: Edit the suggested commit message
+- `s`: Mark a group for staging (auto-stage & commit)
+- `u`: Unmark a group for staging
+- `q`: Quit suggest UI
+- Side panel: Shows details and files for the selected group
+- Card-based layout and dynamic resizing for enhanced usability
+
 ### Upcoming Features
 
-- `quill suggest`: Analyze changes and suggest logical commit groupings
 - `quill history`: Track and reuse previous commit messages
 - Pre-commit hook integration
 - IDE extensions
