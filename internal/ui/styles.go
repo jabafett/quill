@@ -42,6 +42,9 @@ var (
 			Padding(1, 2).
 			BorderStyle(lipgloss.RoundedBorder()).
 			BorderBottom(true).
+			BorderTop(true).
+			BorderRight(true).
+			BorderLeft(true).
 			BorderForeground(primaryLight)
 
 	// List styles

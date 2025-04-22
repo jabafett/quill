@@ -13,7 +13,6 @@ type SuggestionGroup struct {
 	Description string   // Description of the group
 	Files       []string // Files in the group
 	Message     string   // Suggested commit message
-	Impact      string   // Version impact (major/minor/patch)
 	ShouldStage bool     // Whether the files should be staged
 }
 
@@ -149,7 +148,6 @@ func parseRegexResponse(response string, stagedFiles, unstagedFiles []string) []
 	groupPattern := regexp.MustCompile(`(?i)(?:Group|Grouping|Suggestion|Commit)\s*(?:group)?\s*\d+:?\s*([^\n]+)`)
 	filePattern := regexp.MustCompile(`(?i)(?:Files?|Include|Changes):\s*([^\n]+(?:\n\s*[-*]\s*[^\n]+)*)`)
 	messagePattern := regexp.MustCompile(`(?i)(?:Commit message|Message|Description|Commit):\s*([^\n]+)`)
-	impactPattern := regexp.MustCompile(`(?i)(?:Impact|Version impact|Semver|Version):\s*([^\n]+)`)
 
 	// Find all groupings
 	groupMatches := groupPattern.FindAllStringSubmatchIndex(response, -1)
@@ -212,14 +210,6 @@ func parseRegexResponse(response string, stagedFiles, unstagedFiles []string) []
 			message = regexp.MustCompile("`|'|\"").ReplaceAllString(message, "")
 		}
 
-		// Extract impact (optional now)
-		impact := ""
-		impactMatches := impactPattern.FindStringSubmatch(groupContent)
-		if len(impactMatches) > 1 {
-			impact = strings.TrimSpace(impactMatches[1])
-			impact = regexp.MustCompile("`|'|\"").ReplaceAllString(impact, "")
-		}
-
 		// Validate files against the repository
 		validatedFiles := make([]string, 0, len(files))
 		for _, file := range files {
@@ -250,7 +240,6 @@ func parseRegexResponse(response string, stagedFiles, unstagedFiles []string) []
 				Description: description,
 				Files:       validatedFiles,
 				Message:     message,
-				Impact:      impact,
 				ShouldStage: shouldStage,
 			}
 
