@@ -13,7 +13,6 @@ import (
 	"github.com/jabafett/quill/internal/utils/helpers"
 )
 
-// Key map for suggest UI
 type suggestKeyMap struct {
 	Up      key.Binding
 	Down    key.Binding
@@ -24,45 +23,40 @@ type suggestKeyMap struct {
 	Stage   key.Binding
 	Unstage key.Binding
 	Back    key.Binding
-	Help    key.Binding
 }
 
 var suggestKeys = suggestKeyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "move up"),
+		key.WithHelp("↑/k", "up"),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "move down"),
+		key.WithHelp("↓/j", "down"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "select/apply"),
+		key.WithHelp("enter", "select"),
 	),
 	Edit: key.NewBinding(
 		key.WithKeys("e"),
-		key.WithHelp("e", "edit commit message"),
+		key.WithHelp("e", "edit msg"),
 	),
 	Reload: key.NewBinding(
 		key.WithKeys("r"),
-		key.WithHelp("r", "regenerate suggestions"),
+		key.WithHelp("r", "regen"),
 	),
 	Stage: key.NewBinding(
 		key.WithKeys("s"),
-		key.WithHelp("s", "mark for staging"),
+		key.WithHelp("s", "stage"),
 	),
 	Unstage: key.NewBinding(
 		key.WithKeys("u"),
-		key.WithHelp("u", "unmark for staging"),
+		key.WithHelp("u", "unstage"),
 	),
 	Back: key.NewBinding(
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "cancel edit"),
-	),
-	Help: key.NewBinding(
-		key.WithKeys("?"),
-		key.WithHelp("?", "toggle help"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
@@ -75,7 +69,13 @@ type SuggestionItem struct {
 	index      int
 }
 
-func (i SuggestionItem) Title() string       { return i.suggestion.Description }
+func (i SuggestionItem) Title() string {
+    marker := "✗"
+    if i.suggestion.ShouldStage {
+        marker = "✔"
+    }
+    return fmt.Sprintf("%s %s", marker, i.suggestion.Description)
+}
 func (i SuggestionItem) Description() string {
 	count := len(i.suggestion.Files)
 	if count == 0 {
@@ -96,7 +96,6 @@ type SuggestModel struct {
 	selected           *helpers.SuggestionGroup
 	quitting           bool
 	editing            bool
-	showHelp           bool
 	width, height      int
 	statusMessage      string
 	statusMessageTimer int
@@ -115,13 +114,18 @@ func NewSuggestModel(suggestions []helpers.SuggestionGroup) SuggestModel {
 	delegate.Styles.NormalDesc = styleListItem.Copy().Foreground(dimmedColor)
 
 	l := list.New(items, delegate, 0, 0)
-	l.Title = "✨ Commit Grouping Suggestions"
-	l.SetShowStatusBar(false)
+	// Handled manually in renderListPanel so it stays pinned
+	l.Title = ""
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
-	l.Styles.Title = styleHeading.Copy().Padding(0, 1)
+	l.Styles.Title = lipgloss.NewStyle() // Title is rendered manually
 	l.Styles.PaginationStyle = styleHelp
 	l.Styles.HelpStyle = styleHelp
-	l.SetShowHelp(false)
+	l.SetShowHelp(true)
+	l.Styles.NoItems = lipgloss.NewStyle().Padding(1, 2) // Style for empty list
+	l.Styles.FilterPrompt = lipgloss.NewStyle().Foreground(primaryLight)
+	l.Styles.FilterCursor = lipgloss.NewStyle().Foreground(primaryLight)
+	l.Styles.StatusBar = styleHelp // Use help style for status bar
 
 	ta := textarea.New()
 	ta.Placeholder = "Edit commit message..."
@@ -140,8 +144,8 @@ func NewSuggestModel(suggestions []helpers.SuggestionGroup) SuggestModel {
 }
 
 func (m SuggestModel) Init() tea.Cmd {
-	m.statusMessage = "Use ↑/↓ to navigate, e to edit, s to stage, enter to select"
-	m.statusMessageTimer = 5
+	m.statusMessage = ""
+	m.statusMessageTimer = 0
 	return tea.Batch(textarea.Blink, m.tickStatus())
 }
 
@@ -166,9 +170,38 @@ func (m SuggestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		m.list.SetSize(msg.Width/2-2, msg.Height-4)
-		m.input.SetWidth(msg.Width/2 - 4)
+		m.width = msg.Width
+		m.height = msg.Height
+
+		// No fixed margin subtraction; use full window size
+		totalWidth := m.width
+		totalHeight := m.height * 80 / 100
+
+		// Calculate frame sizes dynamically
+		listFrameX, listFrameY := lipgloss.NewStyle().Padding(1, 1).Border(lipgloss.RoundedBorder()).GetFrameSize()
+		detailFrameX, _ := lipgloss.NewStyle().Padding(1, 1).Border(lipgloss.RoundedBorder()).GetFrameSize()
+
+		// Allocate panel widths so that total including frames fits terminal width
+		listPanelContentWidth := (totalWidth / 3) - listFrameX
+		if listPanelContentWidth < 10 {
+			listPanelContentWidth = 10 // minimum width
+		}
+		detailPanelContentWidth := (totalWidth - (totalWidth / 3)) - detailFrameX
+		if detailPanelContentWidth < 10 {
+			detailPanelContentWidth = 10
+		}
+
+		// Allocate panel heights so that total including frames fits terminal height
+		panelContentHeight := totalHeight - listFrameY
+		if panelContentHeight < 5 {
+			panelContentHeight = 5
+		}
+
+		// Set inner content sizes
+		m.list.SetSize(listPanelContentWidth, panelContentHeight)
+		m.input.SetWidth(detailPanelContentWidth)
+		// keep textarea height fixed (default 5)
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -177,9 +210,6 @@ func (m SuggestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			m.selected = nil
 			return m, tea.Quit
-		case key.Matches(msg, m.keys.Help):
-			m.showHelp = !m.showHelp
-			return m, nil
 		}
 
 		if m.editing {
@@ -258,99 +288,112 @@ func (m SuggestModel) View() string {
 		var content []string
 		content = append(content, styleHeading.Render("✎ Edit Commit Message"))
 		content = append(content, styleCard.Copy().BorderForeground(primaryLight).Render(m.input.View()))
-		content = append(content, styleHelp.Render("enter: save • esc: cancel"))
+		content = append(content, m.renderKeybinds())
 		if m.statusMessage != "" {
 			content = append(content, m.renderStatusMessage())
 		}
 		return lipgloss.NewStyle().Padding(1, 2).Render(lipgloss.JoinVertical(lipgloss.Left, content...))
 	}
 
-	left := m.renderListPanel()
-	right := m.renderDetailPanel()
+	listPanel := m.renderListPanel()
+	detailPanel := m.renderDetailPanel()
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	return lipgloss.JoinHorizontal(lipgloss.Top, listPanel, detailPanel)
 }
 
 func (m SuggestModel) renderListPanel() string {
-	return lipgloss.NewStyle().
-		Width(m.width/2).
-		Height(m.height).
-		Padding(1, 1).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(primaryLight).
+	listWidth := m.width / 3
+
+	// Pinned header
+	header := styleHeading.Render("✨ Commit Groups")
+
+	// Scrolling list body
+	body := lipgloss.NewStyle().
+		Width(listWidth).
 		Render(m.list.View())
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, body)
 }
 
 func (m SuggestModel) renderDetailPanel() string {
+	detailWidth := m.width - (m.width / 3)
+	var content []string
+
+	content = append(content, styleHeading.Render("Details"))
+
 	i, ok := m.list.SelectedItem().(SuggestionItem)
 	if !ok {
-		return ""
-	}
-	s := m.suggestions[i.index]
-
-	var content []string
-	content = append(content, styleHeading.Render("Details"))
-	content = append(content, styleListTitle.Render("Description"))
-	content = append(content, styleDescription.Render(s.Description))
-
-	content = append(content, styleListTitle.Render(fmt.Sprintf("Files (%d)", len(s.Files))))
-	if len(s.Files) == 0 {
-		content = append(content, styleFileItem.Render("No files"))
+		content = append(content, styleListItem.Render("No suggestion selected"))
 	} else {
-		for _, f := range s.Files {
-			content = append(content, styleFileItem.Render("• "+f))
+		s := m.suggestions[i.index]
+
+		content = append(content, styleListTitle.Render("Description"))
+		content = append(content, styleDescription.Render(s.Description))
+
+		content = append(content, styleListTitle.Render(fmt.Sprintf("Files (%d)", len(s.Files))))
+		if len(s.Files) == 0 {
+			content = append(content, styleFileItem.Render("No files"))
+		} else {
+for _, f := range s.Files {
+    var prefix string
+    if s.ShouldStage {
+        prefix = "✔"
+    } else {
+        prefix = "✗"
+    }
+    content = append(content, styleFileItem.Render(prefix+" "+f))
+}
+		}
+
+		content = append(content, styleListTitle.Render("Commit Message"))
+		msgParts := strings.Split(s.Message, "\n\n")
+		if len(msgParts) > 1 {
+			content = append(content, styleCommitMsg.Render(msgParts[0]))
+			bodyLines := strings.Split(msgParts[1], "\n")
+			for _, line := range bodyLines {
+				content = append(content, styleListItem.Render(line))
+			}
+			if len(msgParts) > 2 {
+				content = append(content, "")
+				content = append(content, styleListItem.Copy().Foreground(warningColor).Bold(true).Render(msgParts[2]))
+			}
+		} else {
+			content = append(content, styleCommitMsg.Render(s.Message))
 		}
 	}
 
-	content = append(content, styleListTitle.Render("Commit Message"))
-	msgParts := strings.Split(s.Message, "\n\n")
-	if len(msgParts) > 1 {
-		content = append(content, styleCommitMsg.Render(msgParts[0]))
-		bodyLines := strings.Split(msgParts[1], "\n")
-		for _, line := range bodyLines {
-			content = append(content, styleListItem.Render(line))
-		}
-		if len(msgParts) > 2 {
-			content = append(content, "")
-			content = append(content, styleListItem.Copy().Foreground(warningColor).Bold(true).Render(msgParts[2]))
-		}
-	} else {
-		content = append(content, styleCommitMsg.Render(s.Message))
-	}
-
-	status := "Not marked for staging"
-	if s.ShouldStage {
-		status = "✓ Marked for staging"
-	}
-	content = append(content, styleListTitle.Render("Staging"))
-	content = append(content, styleListItem.Render(status))
-
-	if m.showHelp {
-		content = append(content, styleHelp.Render("↑/↓: navigate • enter: select • e: edit • s/u: stage/unstage • q: quit • ?: toggle help"))
-	} else {
-		content = append(content, styleHelp.Render("?: help • q: quit"))
-	}
+	content = append(content, m.renderKeybinds())
 
 	if m.statusMessage != "" {
 		content = append(content, m.renderStatusMessage())
 	}
 
 	return lipgloss.NewStyle().
-		Width(m.width/2).
+		Width(detailWidth).
 		Height(m.height).
 		Padding(1, 1).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(primaryLight).
+		MarginLeft(1).
 		Render(lipgloss.JoinVertical(lipgloss.Left, content...))
 }
 
+func (m SuggestModel) renderKeybinds() string {
+	return styleHelp.Render("↑/↓: navigate • enter: select • e: edit • s/u: stage/unstage • q: quit")
+}
+
 func (m SuggestModel) renderStatusMessage() string {
-	return lipgloss.NewStyle().
-		Foreground(successColor).
-		Bold(true).
-		Padding(0, 2).
-		MarginTop(1).
-		Render(m.statusMessage)
+	separator := lipgloss.NewStyle().
+		Foreground(dimmedColor).
+		Render(strings.Repeat("─", m.width/2))
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		separator,
+		lipgloss.NewStyle().
+			Foreground(successColor).
+			Bold(true).
+			Padding(0, 2).
+			MarginTop(1).
+			Render(m.statusMessage),
+	)
 }
 
 func (m SuggestModel) Quitting() bool {
