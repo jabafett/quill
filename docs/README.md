@@ -44,17 +44,11 @@ quill generate
 | (✅) `quill init`     | Create initial configuration                |
 | (✅) `quill generate` | Generate commit message from staged changes |
 | (✅) `quill suggest`  | Suggest logical commit groupings            |
-| (🚧) `quill index`    | Index repository context                    |
+| (✅) `quill index`    | Index repository context                    |
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
 
-## Release Notes
-
-### Version 0.1.0 🎉 (Initial Release)
-
-This is the initial release of Quill, focusing on core functionality and provider integration. The following features are now available:
-
-#### Core Features
+## Core Features
 
 - 🛠️ Basic Commands: `init`, `generate`, and `config` commands are fully implemented
 - 🤖 Multi-Provider Support:
@@ -71,7 +65,7 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Message selection
   - Message editing
 
-#### Technical Improvements
+## Technical Improvements
 
 - ⚡ Performance Features:
   - Rate limiting (1 request/second)
@@ -85,13 +79,13 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Import/dependency mapping
   - Cross-reference tracking
 
-#### Known Limitations
+## Known Limitations
 
 - Only basic commands (`init`, `generate`, `config`) are available
 - Advanced features like indexing and smart suggestions are still in development
 - Some context features (historical analysis, contributor tracking) are postponed
 
-#### Installation
+## Installation
 
 ```bash
 go install github.com/jabafett/quill@v0.1.0
