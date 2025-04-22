@@ -13,11 +13,12 @@
 
 - 🤖 **AI-Powered Generation**: Intelligent commit message suggestions using state-of-the-art language models
 - 🎯 **Conventional Commits**: Automatically formatted according to the conventional commits specification
-- 🎨 **Interactive UI**: Beautiful terminal interface for selecting and editing commit messages
+- 🎨 **Interactive UI**: Beautiful terminal interface for selecting and editing commit messages, including a fully-featured suggest UI for commit groupings
 - ⚡ **Multiple Providers**: Support for OpenAI, Gemini, Anthropic, and Ollama
 - 🔒 **Secure**: API keys stored securely in your system's keyring
 - 🚀 **Performance**: Rate limiting and retry mechanisms built-in
 - ⚙️ **Configurable**: Extensive configuration options for customizing behavior
+- 🧩 **Commit Grouping Suggestions**: Use `quill suggest` to analyze changes and get AI-powered suggestions for logical commit groups, with auto-staging and commit support
 
 ## Quick Start
 
@@ -38,7 +39,7 @@ quill generate
 | --------------------- | ------------------------------------------- |
 | (✅) `quill init`     | Create initial configuration                |
 | (✅) `quill generate` | Generate commit message from staged changes |
-| (🚧) `quill suggest`  | Suggest file groupings based on indexing    |
+| (✅) `quill suggest`  | Suggest logical commit groupings            |
 | (🚧) `quill index`    | Index repository context                    |
 | (🚧) `quill history`  | Show message history                        |
 | (✅) `quill config`   | Manage configuration                        |
@@ -139,16 +140,24 @@ export OPENAI_API_KEY="your-key"
 
 ### Interactive UI Controls
 
-When selecting commit messages:
-
+#### Commit Message Selection UI
 - `↑/↓` or `j/k`: Navigate options
 - `enter`: Select message and create commit
 - `e`: Edit message before commit
 - `q`: Quit without committing
 
+#### Suggest Command UI
+- `↑/↓` or `j/k`: Navigate suggestions
+- `enter`: Select a suggestion group
+- `e`: Edit the suggested commit message
+- `s`: Mark a group for staging (auto-stage & commit)
+- `u`: Unmark a group for staging
+- `q`: Quit suggest UI
+- Side panel: Shows details and files for the selected group
+- Card-based layout and dynamic resizing for enhanced usability
+
 ### Upcoming Features
 
-- `quill suggest`: Analyze changes and suggest logical commit groupings
 - `quill history`: Track and reuse previous commit messages
 - Pre-commit hook integration
 - IDE extensions
