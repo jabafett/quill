@@ -63,7 +63,7 @@ func TestPromptForProvider(t *testing.T) {
 				t.Fatalf("Failed to create pipe: %v", err)
 			}
 			os.Stdin = r
-			
+
 			// Write test input
 			go func() {
 				defer w.Close()
@@ -72,7 +72,7 @@ func TestPromptForProvider(t *testing.T) {
 
 			// Call function
 			got, err := cmd.PromptForProvider()
-			
+
 			// Cleanup
 			os.Stdin = oldStdin
 			r.Close()
@@ -146,7 +146,7 @@ func TestGetProviderConfig(t *testing.T) {
 			want: []string{
 				"model = \"gemini-1.5-flash-002\"",
 				"max_tokens = 8192",
-				"temperature = 0.3",
+				"temperature = 0.5",
 			},
 		},
 		{

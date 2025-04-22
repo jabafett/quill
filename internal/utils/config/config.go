@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/viper"
-	"github.com/jabafett/quill/internal/utils/keyring"
 	"github.com/jabafett/quill/internal/utils/ai"
+	"github.com/jabafett/quill/internal/utils/keyring"
+	"github.com/spf13/viper"
 )
 
 // Config validation errors
@@ -20,15 +20,15 @@ var (
 )
 
 type Config struct {
-	Core      CoreConfig             `mapstructure:"core"`
-	Providers map[string]AIProvider  `mapstructure:"providers"`
+	Core      CoreConfig            `mapstructure:"core"`
+	Providers map[string]AIProvider `mapstructure:"providers"`
 }
 
 type CoreConfig struct {
-	DefaultProvider string        `mapstructure:"default_provider"`
-	CacheTTL       time.Duration `mapstructure:"cache_ttl"`
-	MaxDiffSize    string        `mapstructure:"max_diff_size"`
-	DefaultCandidates int        `mapstructure:"default_candidates"`
+	DefaultProvider   string        `mapstructure:"default_provider"`
+	CacheTTL          time.Duration `mapstructure:"cache_ttl"`
+	MaxDiffSize       string        `mapstructure:"max_diff_size"`
+	DefaultCandidates int           `mapstructure:"default_candidates"`
 }
 
 type AIProvider struct {
@@ -84,11 +84,9 @@ func LoadConfig() (*Config, error) {
 
 	// Set config paths and names
 	viper.SetConfigType("toml")
-	
+
 	// Add all possible config paths and names
-	viper.AddConfigPath(".")                           // current directory
 	viper.AddConfigPath(filepath.Join(home, ".config")) // ~/.config/
-	viper.AddConfigPath(home)                          // home directory
 
 	// Try both config names
 	configNames := []string{"quill", ".quill"}
@@ -128,4 +126,4 @@ func validateConfig(cfg *Config) error {
 	}
 
 	return nil
-} 
+}

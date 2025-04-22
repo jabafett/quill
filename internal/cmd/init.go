@@ -71,29 +71,25 @@ func PromptForAPIKey(provider string) (string, error) {
 func GetProviderConfig(provider string) string {
 	switch provider {
 	case "gemini":
-		return `    model = "gemini-1.5-flash-002"
+		return `    model = "gemini-2.5-flash"
     max_tokens = 8192
     temperature = 0.3
-    enable_retries = false
-    candidate_count = 2`
+    enable_retries = true`
 	case "anthropic":
-		return `    model = "claude-3-sonnet-20240229"
+		return `    model = "claude-3-5-haiku-20241022"
     max_tokens = 8192
     temperature = 0.3
-    enable_retries = false
-    candidate_count = 2`
+    enable_retries = true`
 	case "openai":
-		return `    model = "gpt-4"
+		return `    model = "gpt-4o-mini"
     max_tokens = 8192
     temperature = 0.3
-    enable_retries = false
-    candidate_count = 2`
+    enable_retries = true`
 	case "ollama":
 		return `    model = "qwen2.5-8b-instruct"
     max_tokens = 8192
     temperature = 0.3
-    enable_retries = true
-    candidate_count = 3`
+    enable_retries = true`
 	default:
 		return ""
 	}
@@ -102,13 +98,13 @@ func GetProviderConfig(provider string) string {
 func GenerateConfig(selectedProvider string) string {
 	return fmt.Sprintf(`[core]
 # Cache TTL duration
-cache_ttl = "24h"
+cache_ttl = "168h"
 # Number of retry attempts for API calls
 retry_attempts = 3
 # Default number of candidates to generate (0-3)
-default_candidates = 2
+default_candidates = 1
 # Maximum diff size for processing
-max_diff_size = "1MB"
+max_diff_size = "500MB"
 # Default provider
 default_provider = "%s"
 

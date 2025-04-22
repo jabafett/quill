@@ -2,6 +2,8 @@ package mocks
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 
 	"github.com/jabafett/quill/internal/utils/ai"
@@ -18,4 +20,10 @@ func (m *MockGeminiProvider) Generate(ctx context.Context, prompt string, opts a
 		return m.GenerateFunc(ctx, prompt, opts)
 	}
 	return []string{"feat(test): add mock implementation"}, nil
-} 
+}
+
+// mocks.EnsureParentDir ensures that the parent directory of the given file path exists
+func EnsureParentDir(filePath string) error {
+	dir := filepath.Dir(filePath)
+	return os.MkdirAll(dir, 0755)
+}
