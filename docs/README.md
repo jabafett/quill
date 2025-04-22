@@ -1,8 +1,10 @@
 # ![quill](https://github.com/jabafett/quill/blob/main/docs/logo/quill-full-logo-50.png?raw=true, "quill") quill
 
-## **Release 0.1.0 🎉**
+## **Release 0.2.0 🎉**
 
-Currently in development, only: `init`, `generate`, `config` commands are available.
+Currently in development, only: `init`, `generate`, `suggest`, and `config` commands are available.
+
+![image](https://github.com/user-attachments/assets/ae3ccf4e-a42b-41b7-991e-8a41ea91a04d)
 
 `quill` streamlines your git workflow by generating contextually aware, conventional commit messages using AI. It analyzes your staged changes and generates properly formatted commit messages that accurately describe your changes.
 
@@ -53,6 +55,7 @@ quill generate
 This is the initial release of Quill, focusing on core functionality and provider integration. The following features are now available:
 
 #### Core Features
+
 - 🛠️ Basic Commands: `init`, `generate`, and `config` commands are fully implemented
 - 🤖 Multi-Provider Support:
   - Google Gemini
@@ -69,6 +72,7 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Message editing
 
 #### Technical Improvements
+
 - ⚡ Performance Features:
   - Rate limiting (1 request/second)
   - Retry mechanism with backoff
@@ -82,11 +86,13 @@ This is the initial release of Quill, focusing on core functionality and provide
   - Cross-reference tracking
 
 #### Known Limitations
+
 - Only basic commands (`init`, `generate`, `config`) are available
 - Advanced features like indexing and smart suggestions are still in development
 - Some context features (historical analysis, contributor tracking) are postponed
 
 #### Installation
+
 ```bash
 go install github.com/jabafett/quill@v0.1.0
 
@@ -172,7 +178,6 @@ Available settings:
 - `enable_retries`: Enable automatic retry on failure
 - `candidate_count`: Default number of suggestions
 
-
 ### Environment Variables
 
 While API keys are preferably stored in the system keyring, they can be provided via environment variables:
@@ -186,12 +191,14 @@ export OPENAI_API_KEY="your-key"
 ### Interactive UI Controls
 
 #### Commit Message Selection UI
+
 - `↑/↓` or `j/k`: Navigate options
 - `enter`: Select message and create commit
 - `e`: Edit message before commit
 - `q`: Quit without committing
 
 #### Suggest Command UI
+
 - `↑/↓` or `j/k`: Navigate suggestions
 - `enter`: Select a suggestion group
 - `e`: Edit the suggested commit message
