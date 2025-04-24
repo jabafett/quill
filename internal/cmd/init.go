@@ -71,7 +71,7 @@ func PromptForAPIKey(provider string) (string, error) {
 func GetProviderConfig(provider string) string {
 	switch provider {
 	case "gemini":
-		return `    model = "gemini-2.5-flash"
+		return `    model = "gemini-2.0-flash"
     max_tokens = 8192
     temperature = 0.3
     enable_retries = true`
