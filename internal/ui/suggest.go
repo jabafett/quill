@@ -70,11 +70,11 @@ type SuggestionItem struct {
 }
 
 func (i SuggestionItem) Title() string {
-    marker := "✗"
-    if i.suggestion.ShouldStage {
-        marker = "✔"
-    }
-    return fmt.Sprintf("%s %s", marker, i.suggestion.Description)
+	marker := "✗"
+	if i.suggestion.ShouldStage {
+		marker = "✔"
+	}
+	return fmt.Sprintf("%s %s", marker, i.suggestion.Description)
 }
 func (i SuggestionItem) Description() string {
 	count := len(i.suggestion.Files)
@@ -279,6 +279,17 @@ func (m SuggestModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// GetStagedSuggestions returns all suggestions that are marked for staging
+func (m SuggestModel) GetStagedSuggestions() []*helpers.SuggestionGroup {
+	var stagedGroups []*helpers.SuggestionGroup
+	for i := range m.suggestions {
+		if m.suggestions[i].ShouldStage {
+			stagedGroups = append(stagedGroups, &m.suggestions[i])
+		}
+	}
+	return stagedGroups
+}
+
 func (m SuggestModel) View() string {
 	if m.quitting {
 		return styleError.Render("Operation cancelled")
@@ -334,15 +345,15 @@ func (m SuggestModel) renderDetailPanel() string {
 		if len(s.Files) == 0 {
 			content = append(content, styleFileItem.Render("No files"))
 		} else {
-for _, f := range s.Files {
-    var prefix string
-    if s.ShouldStage {
-        prefix = "✔"
-    } else {
-        prefix = "✗"
-    }
-    content = append(content, styleFileItem.Render(prefix+" "+f))
-}
+			for _, f := range s.Files {
+				var prefix string
+				if s.ShouldStage {
+					prefix = "✔"
+				} else {
+					prefix = "✗"
+				}
+				content = append(content, styleFileItem.Render(prefix+" "+f))
+			}
 		}
 
 		content = append(content, styleListTitle.Render("Commit Message"))

@@ -136,9 +136,14 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 		selected := selectedModel.Selected()
 		debug.Log("Selected grouping: %s\n", selected.Description)
 
-		// If the user wants to stage and commit the suggested files
-		if selected.ShouldStage {
-			for _, file := range selected.Files {
+		// Get all suggestions marked for staging
+		groupsToCommit := selectedModel.GetStagedSuggestions()
+
+		// Process each group marked for staging
+		for _, group := range groupsToCommit {
+			debug.Log("Processing group: %s\n", group.Description)
+			// Stage the files
+			for _, file := range group.Files {
 				debug.Log("Staging file: %s\n", file)
 				stageCmd := exec.Command("git", "add", file)
 				if err := stageCmd.Run(); err != nil {
@@ -146,25 +151,25 @@ func runSuggest(cmd *cobra.Command, args []string) error {
 				}
 			}
 			debug.Log("Files staged successfully.")
-			if selected.Message != "" {
-				debug.Log("Committing changes with message: %s\n", selected.Message)
-				commitCmd := exec.Command("git", "commit", "-m", selected.Message)
+
+			// Commit the changes
+			if group.Message != "" {
+				debug.Log("Committing changes with message: %s\n", group.Message)
+				commitCmd := exec.Command("git", "commit", "-m", group.Message)
 				if err := commitCmd.Run(); err != nil {
 					return fmt.Errorf("failed to commit changes: %v", err)
 				}
 				debug.Log("Changes committed successfully.")
 			}
-		} else {
-			// Just show the suggested message
-			if selected.Message != "" {
-				debug.Log("Suggested commit message: %s\n", selected.Message)
-				debug.Log("To stage and commit these changes, run:")
-				for _, file := range selected.Files {
-					debug.Log("  git add %s\n", file)
-				}
-				debug.Log("  git commit -m \"%s\"\n", selected.Message)
-			}
 		}
+	} else if selected := selectedModel.Selected(); selected != nil {
+		// Just show the suggested message for the selected group
+		debug.Log("Suggested commit message: %s\n", selected.Message)
+		debug.Log("To stage and commit these changes, run:")
+		for _, file := range selected.Files {
+			debug.Log("  git add %s\n", file)
+		}
+		debug.Log("  git commit -m \"%s\"\n", selected.Message)
 	}
 
 	return nil
